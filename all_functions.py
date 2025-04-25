@@ -70,7 +70,7 @@ def simulation_area(params_dict):
     kappa[:] = db2pow(13 - 0.03 * dist_UEs_to_APs[:])
 
     for k in range(0, K):
-        # step 4: Calculate gain channel using equation 4
+        # step 4: Calculate gain channel using equation (between 11 and 12)
         Beta[:, k] = 35.4 - 20 * np.log10(fc) - 26 * np.log10(dist_UEs_to_APs[:, k])  # lx1
 
         gainOverNoise_B[:, k] = Beta[:, k] - noiseVariancedB + (
@@ -105,12 +105,18 @@ def initial_access(params_dict, Beta):
 
     D_cellular = np.zeros((L, K))
     pilot_indicies_ = -1 * np.ones((K, 1))
+
+    D_DCC = np.zeros((L,K))
     for k in range(0, K):
+        gain_sorted = np.argsort(Beta[:,k])
+        strongest_APs = gain_sorted[-2:]
+        D_DCC[strongest_APs,k] = 1
+
         main_AP_index = Beta[:, k].argmax()  # master AP with the highest channel gain for UE k
         D_cellular[main_AP_index, k] = 1  # In cellular, only one AP with max channel gain is serving UE k
         pilot_indicies_ = pilot_assignment(k, main_AP_index, tau_p, pilot_indicies_, Beta)
 
-    D_DCC = createDCC(D_cellular, L, tau_p, Beta, pilot_indicies_)
+    # D_DCC = createDCC(D_cellular, L, tau_p, Beta, pilot_indicies_)
     return D_cellular, D_DCC, pilot_indicies_
 
 
@@ -194,6 +200,33 @@ def channel_estimation(params_dict, R, pilot_indicies_, H, H_Mean, p_k):
                 H_hat[l, k, :, :] = H_Mean[l, k, :, :] + np.sqrt(p_k[k]) * RPsi @ (y_pilot - y_mean)
 
     return H_hat
+
+def compute_SINR_MRC(params_dict, p_k, D_DCC, H_hat, H):
+    N = params_dict["N"]
+    K = params_dict["K"]
+    realizations = params_dict["realizations"]
+
+    SINR = np.zeros((K,1), dtype=float)
+
+    for k in range(0, K):
+        # Compute the number of APs that serve UE k
+        servingAP = np.asarray(np.where(D_DCC[:, k] == 1)).reshape(-1)
+        La = len(servingAP)
+
+        H_k = H[:, servingAP, :, :]  # RxLaxNxK  channels from only serving APs of UE k
+        H_k = np.reshape(H_k, [H_k.shape[0], -1, H_k.shape[-1]])  # Rx(La.N)xK
+
+        Hhat_k = H_hat[:, servingAP, :, :]  # RxLaxNxK  channel estimates  for only serving APs of UE k
+        Hhat_k = np.reshape(Hhat_k, [Hhat_k.shape[0], -1, Hhat_k.shape[-1]])  # Rx(La.N)xK
+
+        v_k = np.zeros((realizations, La * N, 1), dtype=complex)
+        v_k = Hhat_k[:,:,k][:, :, np.newaxis]
+
+        SINR[k,:] = compute_SINR_uatf(v_k, H_k, p_k, k)
+
+    return SINR
+
+
 
 
 def compute_SE_MMSE(params_dict, p_k, D_DCC, H_hat, H, batch=100, SE_metric="uatf"):
@@ -508,6 +541,24 @@ def Compute_SE_uatf(v_k, H_k, p_k, k):
     SINR = numerator / denominator
     SE = np.log2(1 + SINR)
     return SE
+
+def compute_SINR_uatf(v_k, H_k, p_k, k):
+    """
+    Function to calculate SINR for UatF bound
+    Input:
+        v_k: Rx(la.N)x1 receive combining vectors for all serving APs of kth UE for all small scale realizations
+        H_k: Rx(La.N)xK  channel of N size between serving APs of kth UE and all other UEs for all small scale realizations
+        p_k: uplink transmit power of pilot for kth UE
+        k: index of UE
+    Output:
+        SINR: 1x1 SINR for kth UE for UatF lower bound
+    """
+    v_k_H = H_(v_k)  # Rx1x(la.N) # taking hermition and reshaping for multiplications
+    numerator = (p_k[k] * abs(np.mean(v_k_H @ H_k[:, :, k, np.newaxis], axis=0) ** 2)).flatten()
+    denominator = np.sum(p_k.T * np.mean(abs((v_k_H @ H_k) ** 2), axis=0), axis=1).flatten() + np.mean(
+        np.sum(abs(v_k[:, :, 0] ** 2), axis=1)) - numerator
+    SINR = numerator / denominator
+    return SINR
 
 
 def calculate_local_scattering(N, varPhi, varTheta, varAntennaSpacing):
