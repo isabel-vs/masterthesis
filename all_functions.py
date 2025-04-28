@@ -17,6 +17,18 @@ import os
 from scipy import integrate, linalg
 from math import exp, pi, sin, cos, sqrt, radians
 
+def is_ZMatrix(matrix):
+    off_diag_mask = ~np.eye(matrix.shape[0], dtype=bool)
+    return np.all(matrix[off_diag_mask] <= 0)
+
+def sinr(M, u, p):
+    K = M.shape[0]
+    sinr = np.zeros((K,1))
+    interference = M @ p + u
+    for k in range(K):
+        sinr[k] = p[k] / interference[k]
+    return sinr
+
 
 def simulation_area(params_dict):
     """
