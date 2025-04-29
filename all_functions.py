@@ -64,7 +64,22 @@ def simulation_area(params_dict):
 
     # Deploying APs and UEs randomly within the service area
     UEpositions = (np.random.rand(K, 1) + 1j * np.random.rand(K, 1)) * area
-    APpositions = (np.random.rand(L, 1) + 1j * np.random.rand(L, 1)) * area
+
+    # grid_points = int(np.sqrt(L))
+    # block_size = area/grid_points
+    # # Create a grid of real and imaginary parts
+    # real_part = np.linspace(block_size/2, area-block_size/2, grid_points)
+    # imag_part = np.linspace(block_size/2, area-block_size/2, grid_points)
+    # # Create a meshgrid for the real and imaginary parts
+    # real_grid, imag_grid = np.meshgrid(real_part, imag_part)
+
+    # # Combine the real and imaginary parts into complex numbers
+    # APpositions = real_grid + 1j * imag_grid
+
+    # # Flatten the grid and reshape to (L, 1)
+    # APpositions = APpositions.flatten().reshape(L, 1)
+
+    APpositions = (np.random.rand(L, 1) + 1j * np.random.rand(L, 1)) * area     # rand positions AP
 
     # wraping-around to mimic infinite area
     wrapHorizontal = np.tile([-area, 0, area], (3, 1))
@@ -98,7 +113,7 @@ def simulation_area(params_dict):
             # calculating channel mean (LOS component) from equation 41
             H_Mean[l, k, :] = sqrt(db2pow(gainOverNoise_B[l, k])) * np.exp(
                 1j * 2 * pi * antennaSpacing * np.arange(0, N) * sin(phi) * cos(theta))
-    return R, gainOverNoise_B, H_Mean, kappa
+    return R, gainOverNoise_B, H_Mean, kappa, UEpositions, APpositions
 
 
 def initial_access(params_dict, Beta):
