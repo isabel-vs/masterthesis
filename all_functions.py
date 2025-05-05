@@ -14,6 +14,7 @@ import copy
 import numpy as np
 import cmath
 import os
+import time
 from scipy import integrate, linalg
 from math import exp, pi, sin, cos, sqrt, radians
 
@@ -135,17 +136,26 @@ def initial_access(params_dict, Beta):
 
     D_DCC = np.zeros((L,K))
     for k in range(0, K):
-        gain_sorted = np.argsort(Beta[:,k])
-        strongest_APs = gain_sorted[-2:]
-        D_DCC[strongest_APs,k] = 1
+        # gain_sorted = np.argsort(Beta[:,k])
+        # strongest_APs = gain_sorted[-2:]
+        # D_DCC[strongest_APs,k] = 1
 
         main_AP_index = Beta[:, k].argmax()  # master AP with the highest channel gain for UE k
         D_cellular[main_AP_index, k] = 1  # In cellular, only one AP with max channel gain is serving UE k
         pilot_indicies_ = pilot_assignment(k, main_AP_index, tau_p, pilot_indicies_, Beta)
 
-    # D_DCC = createDCC(D_cellular, L, tau_p, Beta, pilot_indicies_)
+    D_DCC = createDCC(D_cellular, L, tau_p, Beta, pilot_indicies_)
     return D_cellular, D_DCC, pilot_indicies_
 
+def createDCC(D_MasterAps, L, tau_p, Beta, pilot_indicies_):  # Cooperation cluster formation using Algo 4.1 from [2]
+    D_ = copy.deepcopy(D_MasterAps)
+    for l_ in range(0, L):
+        for t in range(0, tau_p):
+            ue_mask = (pilot_indicies_[:] == t).flatten().astype(int)
+            ue_mask[ue_mask == 0] = -1
+            ue_index = (db2pow(Beta[l_, :]) * ue_mask).argmax()
+            D_[l_, ue_index] = 1
+    return D_
 
 def channel_generation(params_dict, R, H_Mean, kappa):
     # Function to generate los channels according to defination in section 5
