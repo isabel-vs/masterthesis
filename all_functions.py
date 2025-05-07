@@ -12,6 +12,7 @@ This file has all the functions required to simulate an uplink transmission in (
 
 import copy
 import numpy as np
+import itertools
 import cmath
 import os
 import time
@@ -21,6 +22,38 @@ from math import exp, pi, sin, cos, sqrt, radians
 def is_ZMatrix(matrix):
     off_diag_mask = ~np.eye(matrix.shape[0], dtype=bool)
     return np.all(matrix[off_diag_mask] <= 0)
+
+def is_invZ(matrix):
+    K = np.size(matrix,0)
+    if np.min(matrix) < 0:          # check if nonnegative matrix
+        return False
+    if np.size(matrix)==(2,2):      # if 2x2 matrix, inv-Z iff det(M)>0
+        if np.linalg.det(matrix) > 0:
+            return True
+        return False
+    
+    # check all reduced interference matrices
+    for i, j in itertools.combinations_with_replacement(range(K), 2):
+        M_red = matrix[np.ix_([i, j], [i, j])]
+        if np.linalg.det(M_red) <= 0:
+            return False
+    # M_red = np.zeros((2,2))
+    # for i in range(K):
+    #     for j in range(i,K):
+    #         M_red[0,0] = matrix[i, i]
+    #         M_red[0,1] = matrix[i, j]
+    #         M_red[1,0] = matrix[j, i]
+    #         M_red[1,1] = matrix[j, j]
+
+    #         if np.linalg.det(M_red) <= 0:
+    #             return False
+
+    # last check: invert matrix
+    M_inv = np.linalg.inv(matrix)
+    if is_ZMatrix(M_inv):
+        return True
+    return False
+    
 
 def sinr(M, u, p):
     K = M.shape[0]
