@@ -23,33 +23,29 @@ def is_ZMatrix(matrix):
     off_diag_mask = ~np.eye(matrix.shape[0], dtype=bool)
     return np.all(matrix[off_diag_mask] <= 0)
 
-def is_invZ(matrix):
-    K = np.size(matrix,0)
-    if np.min(matrix) < 0:          # check if nonnegative matrix
+def is_invZ(M):
+
+    K = M.shape[0]
+
+    if M.ndim != 2 or M.shape[0] != M.shape[1]:
+        raise ValueError("Input must be a square matrix")
+
+    if np.min(M) < 0:          # check if nonnegative matrix
         return False
-    if np.size(matrix)==(2,2):      # if 2x2 matrix, inv-Z iff det(M)>0
-        if np.linalg.det(matrix) > 0:
+    if np.size(M)==(2,2):      # if 2x2 matrix, inv-Z iff det(M)>0
+        if np.linalg.det(M) > 0:
             return True
         return False
     
     # check all reduced interference matrices
-    for i, j in itertools.combinations_with_replacement(range(K), 2):
-        M_red = matrix[np.ix_([i, j], [i, j])]
-        if np.linalg.det(M_red) <= 0:
-            return False
-    # M_red = np.zeros((2,2))
-    # for i in range(K):
-    #     for j in range(i,K):
-    #         M_red[0,0] = matrix[i, i]
-    #         M_red[0,1] = matrix[i, j]
-    #         M_red[1,0] = matrix[j, i]
-    #         M_red[1,1] = matrix[j, j]
-
-    #         if np.linalg.det(M_red) <= 0:
-    #             return False
+    d = np.diag(M)
+    i, j = np.triu_indices_from(M, k=1)
+    dets = d[i] * d[j] - M[i,j] * M[j,i]
+    if not np.all(dets>0):
+        return False
 
     # last check: invert matrix
-    M_inv = np.linalg.inv(matrix)
+    M_inv = np.linalg.inv(M)
     if is_ZMatrix(M_inv):
         return True
     return False
@@ -87,6 +83,7 @@ def simulation_area(params_dict):
     antennaSpacing = 1 / 2  # half wavelength
     sigma_sf_los = 8  # dB
     noiseVariancedB = -174 + pow2db(bandwidth) + 7  # Compute noise power (in dBm)
+    AP_pos_rand = params_dict["AP_pos_rand"]
 
     # Initializations to store values
     Beta = np.zeros((L, K))
@@ -99,21 +96,22 @@ def simulation_area(params_dict):
     # Deploying APs and UEs randomly within the service area
     UEpositions = (np.random.rand(K, 1) + 1j * np.random.rand(K, 1)) * area
 
-    # grid_points = int(np.sqrt(L))
-    # block_size = area/grid_points
-    # # Create a grid of real and imaginary parts
-    # real_part = np.linspace(block_size/2, area-block_size/2, grid_points)
-    # imag_part = np.linspace(block_size/2, area-block_size/2, grid_points)
-    # # Create a meshgrid for the real and imaginary parts
-    # real_grid, imag_grid = np.meshgrid(real_part, imag_part)
+    if AP_pos_rand:
+        APpositions = (np.random.rand(L, 1) + 1j * np.random.rand(L, 1)) * area     # rand positions AP
+    else:
+        grid_points = int(np.sqrt(L))
+        block_size = area/grid_points
+        # Create a grid of real and imaginary parts
+        real_part = np.linspace(block_size/2, area-block_size/2, grid_points)
+        imag_part = np.linspace(block_size/2, area-block_size/2, grid_points)
+        # Create a meshgrid for the real and imaginary parts
+        real_grid, imag_grid = np.meshgrid(real_part, imag_part)
 
-    # # Combine the real and imaginary parts into complex numbers
-    # APpositions = real_grid + 1j * imag_grid
+        # Combine the real and imaginary parts into complex numbers
+        APpositions = real_grid + 1j * imag_grid
 
-    # # Flatten the grid and reshape to (L, 1)
-    # APpositions = APpositions.flatten().reshape(L, 1)
-
-    APpositions = (np.random.rand(L, 1) + 1j * np.random.rand(L, 1)) * area     # rand positions AP
+        # Flatten the grid and reshape to (L, 1)
+        APpositions = APpositions.flatten().reshape(L, 1)
 
     # wraping-around to mimic infinite area
     wrapHorizontal = np.tile([-area, 0, area], (3, 1))
