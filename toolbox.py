@@ -81,7 +81,7 @@ def simulation_area(params_dict):
     fc = params_dict["carrier_frequency"]
     h = params_dict["delta_h"]  # 11m
     antennaSpacing = 1 / 2  # half wavelength
-    sigma_sf_los = 8  # dB
+    sigma_sf_los = params_dict["sigma_sf_los"]  # dB
     noiseVariancedB = -174 + pow2db(bandwidth) + 7  # Compute noise power (in dBm)
     AP_pos_rand = params_dict["AP_pos_rand"]
 
@@ -148,7 +148,7 @@ def simulation_area(params_dict):
     return R, gainOverNoise_B, H_Mean, kappa, UEpositions, APpositions
 
 
-def initial_access(params_dict, Beta):
+def initial_access(network_params, params_dict, Beta):
     """
     Function for pilot assignment to UEs and cooperation cluster formation using algorithm in section 5.2 (step 6)
     Input:
@@ -160,7 +160,7 @@ def initial_access(params_dict, Beta):
     """
     L = params_dict["L"]
     K = params_dict["K"]
-    tau_p = params_dict["tau_p"]
+    tau_p = network_params["tau_p"]
 
     D_cellular = np.zeros((L, K))
     pilot_indicies_ = -1 * np.ones((K, 1))
@@ -188,7 +188,7 @@ def createDCC(D_MasterAps, L, tau_p, Beta, pilot_indicies_):  # Cooperation clus
             D_[l_, ue_index] = 1
     return D_
 
-def channel_generation(params_dict, R, H_Mean, kappa):
+def channel_generation(network_params, params_dict, R, H_Mean, kappa):
     # Function to generate los channels according to defination in section 5
     # Channel realizations are drawn from Gaussian distribution ~N_c(h_mean,R) to capture los and small scale fading.
     """
@@ -205,7 +205,7 @@ def channel_generation(params_dict, R, H_Mean, kappa):
     L = params_dict["L"]
     N = params_dict["N"]
     K = params_dict["K"]
-    realizations = params_dict["realizations"]
+    realizations = network_params["realizations"]
 
     H_Mean = np.tile(H_Mean[:, :, :, np.newaxis], (1, 1, 1, realizations))
 
@@ -220,7 +220,7 @@ def channel_generation(params_dict, R, H_Mean, kappa):
     return H, H_Mean, R
 
 
-def channel_estimation(params_dict, R, pilot_indicies_, H, H_Mean, p_k):
+def channel_estimation(network_params, params_dict, R, pilot_indicies_, H, H_Mean, p_k):
     """ Function to calculate the channel estimates, see section 2B
 
     Input:
@@ -237,8 +237,8 @@ def channel_estimation(params_dict, R, pilot_indicies_, H, H_Mean, p_k):
     L = params_dict["L"]
     N = params_dict["N"]
     K = params_dict["K"]
-    tau_p = params_dict["tau_p"]
-    realizations = params_dict["realizations"]
+    tau_p = network_params["tau_p"]
+    realizations = network_params["realizations"]
     p_k = np.full(K, p_k)
     H_hat = np.zeros((L, K, N, realizations), dtype=complex)
     N_tk = sqrt(0.5) * (np.random.randn(N, realizations, L, tau_p) + 1j * np.random.randn(N, realizations, L, tau_p))
@@ -270,10 +270,10 @@ def channel_estimation(params_dict, R, pilot_indicies_, H, H_Mean, p_k):
     return H_hat
 
 
-def compute_SINR_MRC(params_dict, p_k, D_DCC, H_hat, H):
+def compute_SINR_MRC(network_params,params_dict, p_k, D_DCC, H_hat, H):
     N = params_dict["N"]
     K = params_dict["K"]
-    realizations = params_dict["realizations"]
+    realizations = network_params["realizations"]
 
     SINR = np.zeros((K,1), dtype=float)
 
@@ -296,13 +296,13 @@ def compute_SINR_MRC(params_dict, p_k, D_DCC, H_hat, H):
     return SINR
 
 
-def calculate_interf_matrix(params_dict, D_DCC, H_hat, H):
+def calculate_interf_matrix(network_params, params_dict, D_DCC, H_hat, H):
     """ calculate interference matrix (with MRC beamforming)
     """
 
     N = params_dict["N"]
     K = params_dict["K"]
-    realizations = params_dict["realizations"]
+    realizations = network_params["realizations"]
 
     b = np.zeros((K,1))
     C = np.zeros((K,K))
@@ -394,7 +394,7 @@ def calculate_local_scattering(N, varPhi, varTheta, varAntennaSpacing):
         spatial_corr_UE[n] = res_real[0] + 1j * res_imag[0]
 
     # Compute the spatial correlation matrix by utilizing the Toeplitz structure
-    R = linalg.toeplitz(spatial_corr_UE)  # integral gives Nx1, we need to calculate NxN matrix from it
+    R = linalg.toeplitz(np.ravel(spatial_corr_UE))  # integral gives Nx1, we need to calculate NxN matrix from it
     R = R / np.trace(R)  # normalizing
     return R
 
