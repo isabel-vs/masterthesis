@@ -1,10 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import toolbox as funcs
-import os
-import pickle
-import scipy.io
-import time
 
 def create_areas(params_dict, tests):
     L = params_dict["L"]
@@ -19,12 +14,12 @@ def create_areas(params_dict, tests):
     APpos = np.zeros((tests, L, 1), dtype=complex)
 
     for i in range(tests):
-        print("test ", i+1, "/", tests)
+        # print("test ", i+1, "/", tests)
         np.random.seed(i)
         R_spatial_corr_norm[i,:,:,:,:], B_channel_gain[i,:,:], HMean_norm[i,:,:,:], k_rician_factor[i,:,:], UEpos[i,:,:], APpos[i,:,:] = funcs.simulation_area(params_dict)
 
-    with open('vars.pkl', 'wb') as file:
-        pickle.dump((R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos), file)
+    # with open('vars.pkl', 'wb') as file:
+    #     pickle.dump((R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos), file)
 
     return (R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos)
 
