@@ -2,11 +2,11 @@ function [sinr_opt, sprad] = hsdm_sinr_mod(M_block, w, param)
     % INPUT
     % M_block: block of L positive square (N by N) matrices (NxNxL)
     % w: positive weights of rates of users
-    % param.r_ini : initial vector for algorithm (must be positive)
-    % param.K and q : tep size mu_k  = 1/max(w) if k <= K and (k-K)^(-q)
+    % param.s_ini : initial vector for algorithm (must be positive)
+    % param.K and q : step size mu_k  = 1/max(w) if k <= K and (k-K)^(-q)
     % param.stopCri : stopping criterion for algorithm
     % param.maxIter: number of maximum iteration
-    %
+    
     % OUTPUT
     % sinr_opt: optimized SINR of users
     % sprad: spectral radius of diag(sinr_opt) * M
@@ -19,7 +19,7 @@ function [sinr_opt, sprad] = hsdm_sinr_mod(M_block, w, param)
     q = param.q;
     stopCri = param.stopCri;
     maxIter = param.maxIter;
-    L = size(M_block, 1);
+    L = size(M_block, 3);
 
     for kk = 1:maxIter
 

@@ -19,7 +19,7 @@ function [rate_opt, sprad] = hsdm_rate_mod(M_block, w, param)
     q = param.q;
     stopCri = param.stopCri;
     maxIter = param.maxIter;
-    L = size(M_block, 1);
+    L = size(M_block, 3);
 
     for kk = 1:maxIter
         
