@@ -23,10 +23,6 @@ function [rate_opt, sprad] = hsdm_rate_mod(M_block, w, param)
 
     for kk = 1:maxIter
         
-        if mod(kk,2000) == 0
-            fprintf("%i\n",kk);
-        end
-
         r_prev = r;
         gamma_prev = gamma;
 

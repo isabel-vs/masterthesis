@@ -1,18 +1,14 @@
 clear all
 
-n_user = 3;
-% M_test = [1, 0.1, 0.3; 0.2, 0.9, 0.15; 0.3, 0.2, 2]; % inverse-Z matrix
-M_1 = [[1.02296613e+00 6.35566100e-03 7.25840181e-02];
- [6.00648774e-02 3.76520141e-01 5.94862113e-01];
- [3.79902186e-04 3.82250071e-04 7.86407429e-01]];
-M_2 = [[1.02295099e+00 6.37079948e-03 7.25840181e-02];
- [6.00279607e-02 3.76557058e-01 5.94862113e-01];
- [3.78963625e-04 3.83188632e-04 7.86407429e-01]];
-M_3 = [[1.02295099e+00 6.35566100e-03 7.25991566e-02];
- [6.00279607e-02 3.76520141e-01 5.94899029e-01];
- [3.78963625e-04 3.82250071e-04 7.86408368e-01]];
+n_user = 2;
 
-M_block = cat(3, M_1, M_2, M_3);
+M_1 = [[3.60657411e-01 1.47777277e-04];
+                [7.73765393e-04 1.30344353e-01]];
+M_2 = [[3.60656879e-01 1.48309570e-04];
+                [7.72546745e-04 1.30345571e-01]];
+
+
+M_block = cat(3, M_1, M_2);
 %%% If M is a inverse-Z matrix, then both algorithms are optimal %%%
 
 w = ones(n_user,1); %positive weights of users
@@ -22,7 +18,7 @@ param.r_ini = log(1 + param.s_ini); %initial value for Alg 2 (over rate region)
 param.K = 2000;  % K > 0 (use constant step-size for first K iterations)
 param.q = 0.9;  % 0 < q <= 1 (decay factor of step-size)
 param.stopCri = 1e-4; %stopping criterion (need to be sufficiently small)
-param.maxIter = 50000; %number of max iteration (need to be sufficiently large)
+param.maxIter = 10000; %number of max iteration (need to be sufficiently large)
 
 % [sinr_opt, sprad_sinr] = hsdm_sinr_mod(M_block, w, param);
 [rate_opt, sprad_rate] = hsdm_rate_mod(M_block, w, param);

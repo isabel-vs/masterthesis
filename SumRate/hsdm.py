@@ -1,5 +1,6 @@
 import numpy as np
-from scipy.sparse import linalg
+from scipy import sparse
+from scipy import linalg
 
 def hsdm_sinr(M_block, w, param):
     """
@@ -33,8 +34,7 @@ def hsdm_sinr(M_block, w, param):
         gamma_max = 0
         l_max = np.nan
         for l in range(L):
-            eigenvals, _ = linalg.eigs(np.diag(s) @ M_block[:,:,l], k=1, which='LR')
-            gamma_l = np.real(eigenvals[0])
+            gamma_l, _ = find_sprad(np.diag(s) @ M_block[:,:,l])
             
             if gamma_l > gamma_max:
                 gamma_max = gamma_l
@@ -43,10 +43,8 @@ def hsdm_sinr(M_block, w, param):
         gamma = gamma_max
         M = M_block[:,:,l_max]
 
-        _, xi_col = linalg.eigs(np.diag(s) @ M, k=1, which='LR')    # right eigenvector
-        xi = np.abs(xi_col).flatten()
-        _, eta_col = linalg.eigs(M.T @ np.diag(s), k=1, which='LR')    # left eigenvector
-        eta = np.abs(eta_col).flatten()
+        _, xi = find_sprad(np.diag(s) @ M)
+        _, eta = find_sprad(M.T @ np.diag(s))
 
         xi = xi / (xi @ eta)
 
@@ -103,8 +101,7 @@ def hsdm_rate(M_block, w, param):
         gamma_max = 0
         l_max = np.nan
         for l in range(L):
-            eigenvals, _ = linalg.eigs(np.diag(np.exp(r) - 1) @ M_block[:,:,l], k=1, which='LR')
-            gamma_l = np.real(eigenvals[0])
+            gamma_l, _ = find_sprad(np.diag(np.exp(r) - 1) @ M_block[:,:,l])
             
             if gamma_l > gamma_max:
                 gamma_max = gamma_l
@@ -113,10 +110,8 @@ def hsdm_rate(M_block, w, param):
         gamma = gamma_max
         M = M_block[:,:,l_max]
 
-        _, xi_col = linalg.eigs(np.diag(np.exp(r) - 1) @ M, k=1, which='LR')    # right eigenvector
-        xi = np.abs(xi_col).flatten()
-        _, eta_col = linalg.eigs(M.T @ np.diag(np.exp(r) - 1), k=1, which='LR')    # left eigenvector
-        eta = np.abs(eta_col).flatten()
+        _, xi = find_sprad(np.diag(np.exp(r) - 1) @ M)
+        _, eta = find_sprad(M.T @ np.diag(np.exp(r) - 1))
 
         xi = xi / (xi @ eta)
 
@@ -139,3 +134,20 @@ def hsdm_rate(M_block, w, param):
     sprad = gamma
 
     return rate_opt, sprad
+
+
+def find_sprad(A):
+    """
+    find spectral radius of matrix A (NxN)
+    """
+    N = A.shape[0]
+    if N>2:
+        val, vec = sparse.linalg.eigs(A, k=1, which='LR')
+        sprad = np.real(val[0])
+        vec = np.abs(vec)
+    else:
+        eigenvals, eigenvecs = linalg.eig(A)
+        idx = np.argmax(np.real(eigenvals))
+        sprad = np.real(eigenvals[idx])
+        vec = np.abs(eigenvecs[:,idx]).flatten()
+    return sprad, vec
