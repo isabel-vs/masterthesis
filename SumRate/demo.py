@@ -1,10 +1,10 @@
 import numpy as np
 from hsdm import *
 
-M_1 = np.array([[5.16867179e-01, 1.81536773e-05],
-                [9.14085826e-03, 7.09261167e-02]])
-M_2 = np.array([[5.16867093e-01, 1.82397961e-05],
-                [9.13892636e-03, 7.09280486e-02]])
+M_1 = np.array([[3.60657411e-01, 1.47777277e-04],
+ [7.73765393e-04, 1.30344353e-01]])
+M_2 = np.array([[3.60656879e-01, 1.48309570e-04],
+ [7.72546745e-04, 1.30345571e-01]])
 
 n_user = M_1.shape[0]
 
@@ -24,10 +24,17 @@ param = {
     'maxIter': 10000    # number of max iteration (need to be sufficiently large)
 }
 
-# sinr_opt, sprad_sinr = hsdm_sinr(M_block, w, param)
+sinr_opt, sprad_sinr = hsdm_sinr(M_block, w, param)
 rate_opt, sprad_rate = hsdm_rate(M_block, w, param)
-# print(sinr_opt)
-# print(sprad_sinr)
-print("sum-rate:", np.sum(rate_opt))
-print("opt rates:", rate_opt)
-print("spectral radius:", sprad_rate)
+
+rate_s = np.log2(1+sinr_opt)
+
+print("(s) opt sinr:", sinr_opt)
+
+print("(s) sum-rate:", np.sum(rate_s))
+print("(s) opt rate:", rate_s)
+print("(s) spectral radius:", sprad_sinr)
+
+print("(r) sum-rate:", np.sum(rate_opt))
+print("(r) opt rates:", rate_opt)
+print("(r) spectral radius:", sprad_rate)

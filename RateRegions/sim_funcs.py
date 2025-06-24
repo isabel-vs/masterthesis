@@ -67,7 +67,7 @@ def run_sim(network_params, area_params, simulation_params, area_values, seed):
         p_inital = np.random.uniform(low=np.nextafter(0,1), high=np.nextafter(1,2), size=(K,1))     #draw random initial power for each user ]0,1]
         p_k = p_max / np.linalg.norm(p_inital, norm_type) * p_inital   # Kx1 power vector for all UEs (scaled such that power constraint fulfilled with equality)
 
-        # SINR[:,i][:,np.newaxis]= funcs.compute_SINR_MRC(network_params, p_k, D_DCC, H_hat, H)
+        # SINR[:,i][:,np.newaxis]= funcs.compute_SINR_MRC(network_params, area_params, p_k, D_DCC, H_hat, H)
         SINR[:,i][:,np.newaxis] = funcs.sinr(M,u,p_k)
         # print("Progress: ", i, "/",setups)
  
