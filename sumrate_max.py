@@ -46,7 +46,7 @@ def hsdm_sinr(M_block, w, param):
         _, xi = find_sprad(np.diag(s) @ M)
         _, eta = find_sprad(M.T @ np.diag(s))
 
-        xi = xi / (xi @ eta)
+        xi = xi / (xi.T @ eta)
 
         if gamma > 1:
             g = gamma * xi * eta / s
@@ -62,9 +62,21 @@ def hsdm_sinr(M_block, w, param):
             
         if gamma < 1 + stopCri and np.abs(gamma - gamma_prev) < stopCri and np.abs(w @ np.log(1+s) - w @ np.log(1+s_prev)) < stopCri:
             break
-    
-    sinr_opt = s
-    sprad = gamma
+
+    # scale to get back to feasible region (sprad=1)
+    s_scaled = 1/gamma * s
+
+    gamma_max = 0
+    l_max = np.nan
+    for l in range(L):
+        gamma_l, _ = find_sprad(np.diag(s_scaled) @ M_block[:,:,l])
+        
+        if gamma_l > gamma_max:
+            gamma_max = gamma_l
+            l_max = l
+     
+    sinr_opt = s_scaled
+    sprad = gamma_max
 
     return sinr_opt, sprad
 
@@ -130,10 +142,68 @@ def hsdm_rate(M_block, w, param):
         if gamma < 1 + stopCri and np.abs(gamma - gamma_prev) < stopCri and np.abs(w @ np.log(1+r) - w @ np.log(1+r_prev)) < stopCri:
             break
     
-    rate_opt = r
-    sprad = gamma
+    # scale to get to feasible region (sprad=1)
+    alpha = 1/gamma
+    s_scaled = alpha*(np.exp(r) - 1)
+    r_scaled = np.log(1 + s_scaled)
+
+    gamma_max = 0
+    l_max = np.nan
+    for l in range(L):
+        gamma_l, _ = find_sprad(np.diag(np.exp(r_scaled) - 1) @ M_block[:,:,l])
+        
+        if gamma_l > gamma_max:
+            gamma_max = gamma_l
+            l_max = l
+    
+    rate_opt = r_scaled
+    sprad = gamma_max
 
     return rate_opt, sprad
+
+
+def bcd(bk, ck, sigma2, K, pmax):
+    '''
+    bk (Kx1)
+    ck (KxK)
+    sigma2 (Kx1)
+    '''
+    
+    objec_new = np.inf
+    eta = pmax * np.random.uniform(low=np.nextafter(0,1), high=np.nextafter(1,2), size=(K))
+
+    eee = np.zeros((K))
+    uuu = np.zeros((K))
+    ddd = np.zeros((K))
+
+    diff = 100
+
+    iterr = 0
+    while (diff>0.0001) or (diff<0):
+        iterr +=1
+        objec_old = objec_new
+
+        for k in range(K):
+            numm = np.sqrt(bk[k]*eta[k])
+            denomm = eta[k]*bk[k] + ck[:,k].T @ eta + sigma2[k]
+
+            uuu[k] = numm/denomm
+            eee[k] = 1 - np.abs(numm)**2/denomm
+            ddd[k] = 1/eee[k]
+        
+        for k in range(K):
+            numm = bk[k] * ddd[k] * uuu[k]**2
+            denomm  = numm
+            for i in range (K):
+                denomm += ddd[i] * np.abs(uuu[i])**2 * ck[k,i]
+            
+            eta[k] = np.min([pmax, ddd[k] * numm/(denomm**2)])
+        
+        objec_new = np.sum(ddd * eee - np.log(ddd))
+        diff = objec_old - objec_new
+
+    rates = np.log(ddd)
+    return rates, eta
 
 
 def find_sprad(A):
@@ -144,7 +214,7 @@ def find_sprad(A):
     if N>2:
         val, vec = sparse.linalg.eigs(A, k=1, which='LR')
         sprad = np.real(val[0])
-        vec = np.abs(vec)
+        vec = np.abs(vec).flatten()
     else:
         eigenvals, eigenvecs = linalg.eig(A)
         idx = np.argmax(np.real(eigenvals))
