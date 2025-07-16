@@ -1,7 +1,7 @@
 import numpy as np
-from sumrate_max import *
-import toolbox as funcs
-import sim_funcs as sim
+from SumRate.sumrate_max import *
+import RateRegions.toolbox as funcs
+import RateRegions.sim_funcs as sim
 import pickle
 import time
 
@@ -51,7 +51,6 @@ APpos = APpos_block[i,:,:]
 
 area_values = (R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos)
 
-
 M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = sim.run_sim(network_params, area_params, sim_params, area_values, i)
 
 A = np.eye(K)
@@ -59,6 +58,7 @@ M_k = np.zeros((K,K,K))
 inv_interf = True
 for k in range(K):
     M_k[:,:,k] = M + (u @ A[:,k][:,np.newaxis].T)/p_max
+for k in range(K):
     if funcs.is_invZ(M_k[:,:,k]) == False:
         inv_interf = False
         break
@@ -74,24 +74,26 @@ param_hsdm = {
     'K': 2000,          # K > 0 (use constant step-size for first K iterations)
     'q': 0.9,           # 0 < q <= 1 (decay factor of step-size)
     'stopCri': 1e-4,    # stopping criterion (need to be sufficiently small)
-    'maxIter': 10000    # number of max iteration (need to be sufficiently large)
+    'maxIter': 50000    # number of max iteration (need to be sufficiently large)
 }
 
 start_hsdm = time.time()
 rate_hsdm, sprad_hsdm = hsdm_rate(M_k, w, param_hsdm)
 end_hsdm = time.time()
-rate_hsdm /= np.log(2)
+# rate_hsdm /= np.log(2)
 print("hsdm:", np.sum(rate_hsdm), rate_hsdm, sprad_hsdm)
 print("time hsdm", (end_hsdm - start_hsdm))
 
-# start_bcd = time.time()
-# rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max)
-# end_bcd = time.time()
-# # rate_bcd /= np.log(2)
-# print("bcd:", np.sum(rate_bcd), rate_bcd)
-# print("time bcd", (end_bcd - start_bcd))
+p_hsdm = power_fixpoint(p_max, K, M, u, (np.exp(rate_hsdm)-1))
+print("power hsdm:", p_hsdm.flatten())
 
-
+start_bcd = time.time()
+rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max)
+end_bcd = time.time()
+# rate_bcd /= np.log(2)
+print("bcd:", np.sum(rate_bcd), rate_bcd)
+print("time bcd", (end_bcd - start_bcd))
+print("power bcd:", p_bcd)
 
 
 

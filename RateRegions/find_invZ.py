@@ -1,5 +1,5 @@
 import numpy as np
-import toolbox as funcs
+import RateRegions.toolbox as funcs
 import sim_funcs as sim
 import pickle
 

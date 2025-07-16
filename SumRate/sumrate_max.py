@@ -221,3 +221,16 @@ def find_sprad(A):
         sprad = np.real(eigenvals[idx])
         vec = np.abs(eigenvecs[:,idx]).flatten()
     return sprad, vec
+
+
+def power_fixpoint(p_max, K, M, u, s):
+    p_new = p_max * np.random.uniform(low=np.nextafter(0,1), high=np.nextafter(1,2), size=(K,1))  #initialize randomly
+    thresh = 1e-8
+    max_iter = 1000000
+    for iter in range(max_iter):
+        p_old = p_new
+        T = M @ p_new + u
+        p_new = np.diag(s) @ T
+        if np.abs(np.max(p_new - p_old))<thresh:
+            break
+    return p_new

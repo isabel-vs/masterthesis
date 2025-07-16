@@ -1,7 +1,7 @@
 import numpy as np
 import toolbox as funcs
 
-def create_areas(params_dict, tests):
+def create_areas(params_dict, tests, start=0):
     L = params_dict["L"]
     N = params_dict["N"]
     K = params_dict["K"]
@@ -14,8 +14,8 @@ def create_areas(params_dict, tests):
     APpos = np.zeros((tests, L, 1), dtype=complex)
 
     for i in range(tests):
-        # print("test ", i+1, "/", tests)
-        np.random.seed(i)
+        print("test ", i+1, "/", tests)
+        np.random.seed(i+start)
         R_spatial_corr_norm[i,:,:,:,:], B_channel_gain[i,:,:], HMean_norm[i,:,:,:], k_rician_factor[i,:,:], UEpos[i,:,:], APpos[i,:,:] = funcs.simulation_area(params_dict)
 
     # with open('vars.pkl', 'wb') as file:

@@ -1,5 +1,5 @@
 import numpy as np
-from sumrate_max import *
+from SumRate.sumrate_max import *
 
 M_1 = np.array([[3.60657411e-01, 1.47777277e-04],
  [7.73765393e-04, 1.30344353e-01]])
