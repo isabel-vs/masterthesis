@@ -16,7 +16,7 @@ area_params = {"delta_h": 10 # height difference
                     , "bandwidth": 100e6
                     , "L": 10  # APs
                     , "N": 2  # antennas per AP
-                    , "K": 3  # UEs
+                    , "K": 10  # UEs
                     , "carrier_frequency": 2000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
                     , "AP_pos_rand": True
@@ -40,7 +40,7 @@ area_block = pickle.load(open(filename, "rb"))
 
 (R_block, B_block, HMean_block, kappa_block, UEpos_block, APpos_block) = area_block
 
-i = 3
+i = 0
 
 R_spatial_corr_norm = R_block[i,:,:,:,:]
 B_channel_gain =  B_block[i,:,:]
@@ -74,11 +74,12 @@ param_hsdm = {
     'K': 2000,          # K > 0 (use constant step-size for first K iterations)
     'q': 0.9,           # 0 < q <= 1 (decay factor of step-size)
     'stopCri': 1e-4,    # stopping criterion (need to be sufficiently small)
-    'maxIter': 50000    # number of max iteration (need to be sufficiently large)
+    'maxIter': 10000    # number of max iteration (need to be sufficiently large)
 }
 
 start_hsdm = time.time()
-rate_hsdm, sprad_hsdm = hsdm_rate(M_k, w, param_hsdm)
+rate_hsdm, sprad_hsdm = hsdm_cut(M_k, w, param_hsdm)
+# rate_hsdm = np.log(sinr_hsdm + 1)
 end_hsdm = time.time()
 # rate_hsdm /= np.log(2)
 print("hsdm:", np.sum(rate_hsdm), rate_hsdm, sprad_hsdm)
@@ -87,13 +88,13 @@ print("time hsdm", (end_hsdm - start_hsdm))
 p_hsdm = power_fixpoint(p_max, K, M, u, (np.exp(rate_hsdm)-1))
 print("power hsdm:", p_hsdm.flatten())
 
-start_bcd = time.time()
-rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max)
-end_bcd = time.time()
-# rate_bcd /= np.log(2)
-print("bcd:", np.sum(rate_bcd), rate_bcd)
-print("time bcd", (end_bcd - start_bcd))
-print("power bcd:", p_bcd)
+# start_bcd = time.time()
+# rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max)
+# end_bcd = time.time()
+# # rate_bcd /= np.log(2)
+# print("bcd:", np.sum(rate_bcd), rate_bcd)
+# print("time bcd", (end_bcd - start_bcd))
+# print("power bcd:", p_bcd)
 
 
 

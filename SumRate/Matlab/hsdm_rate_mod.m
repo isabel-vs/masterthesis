@@ -20,6 +20,8 @@ function [rate_opt, sprad] = hsdm_rate_mod(M_block, w, param)
     stopCri = param.stopCri;
     maxIter = param.maxIter;
     L = size(M_block, 3);
+    
+    rate_track = [];
 
     for kk = 1:maxIter
         
@@ -55,6 +57,8 @@ function [rate_opt, sprad] = hsdm_rate_mod(M_block, w, param)
             mu = 1 / beta * (kk - K) ^(-q);
         end
         r = r_til + mu * w;
+        
+        rate_track = [rate_track r];
 
         if gamma < 1 + stopCri ...
                 && abs(gamma - gamma_prev) < stopCri ...
@@ -62,7 +66,7 @@ function [rate_opt, sprad] = hsdm_rate_mod(M_block, w, param)
              break
         end
     end
-
+    
     rate_opt = r;
     sprad = gamma;
 end

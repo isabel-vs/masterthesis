@@ -4,8 +4,8 @@ import sim_funcs as sim
 import pickle
 
 area_params = {"delta_h": 10 # height difference
-                    , "area": 100  # lxl Service Area
-                    , "bandwidth": 100e6
+                    , "area": 500  # lxl Service Area
+                    , "bandwidth": 20e6
                     , "L": 2  # APs
                     , "N": 2  # antennas per AP
                     , "K": 3  # UEs
@@ -19,14 +19,14 @@ sim_params = {"setups": 1000,
                      "v":-1,
                      "d": 0,   #rician factor (0: no LoS component)
                      "norm_type" : np.inf,
-                     "tests" :100
+                     "tests" :50
                     }
 
-L = [16]
+L = [64]
 N = [4]
-K = [64]
+K = [6]
 
-start = 100
+start = 0
 tests = sim_params["tests"]
 
 for l in L:
@@ -38,6 +38,6 @@ for l in L:
 
             area_block = sim.create_areas(area_params, tests, start)
 
-            file = f"RateRegions/cdf_sim/results_L{l}N{n}K{k}_{start}-{start+tests-1}.pkl"
+            file = f"RateRegions/sim results/results_L{l}N{n}K{k}_{start}-{start+tests-1}.pkl"
             with open(file, 'wb') as outfile:
                 pickle.dump(area_block, outfile)

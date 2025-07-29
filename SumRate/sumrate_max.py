@@ -55,11 +55,12 @@ def hsdm_sinr(M_block, w, param):
             s_hat = s
         
         s_til = np.maximum(0, s_hat)    # disregards b in the simulations
+        s_til = np.minimum(s_til, np.exp(20))
 
         if kk > K:
             mu = 1 / beta * (kk - K)**(-q)
         s = s_til + mu * w / (1+s_til)
-            
+        
         if gamma < 1 + stopCri and np.abs(gamma - gamma_prev) < stopCri and np.abs(w @ np.log(1+s) - w @ np.log(1+s_prev)) < stopCri:
             break
 
@@ -78,7 +79,7 @@ def hsdm_sinr(M_block, w, param):
     sinr_opt = s_scaled
     sprad = gamma_max
 
-    return sinr_opt, sprad
+    return sinr_opt, sprad, gamma
 
 
 def hsdm_rate(M_block, w, param):
@@ -128,12 +129,13 @@ def hsdm_rate(M_block, w, param):
         xi = xi / (xi @ eta)
 
         if gamma > 1:
-            g = gamma * xi * eta / r
+            g = gamma * xi * eta * np.exp(r)/ (np.exp(r) - 1)
             r_hat = r - (gamma - 1) * g / (g @ g)
         else:
             r_hat = r
         
         r_til = np.maximum(0, r_hat)    # disregards b in the simulations
+        r_til = np.minimum(r_til, 20)
 
         if kk > K:
             mu = 1 / beta * (kk - K)**(-q)
@@ -159,7 +161,96 @@ def hsdm_rate(M_block, w, param):
     rate_opt = r_scaled
     sprad = gamma_max
 
-    return rate_opt, sprad
+    return rate_opt, sprad, gamma
+
+
+def hsdm_cut(M_block, w, param):
+    """
+    INPUT:
+        M_block: block of L positive square (N by N) matrices (NxNxL)
+        w: positive weights of rates of users
+        param['r_ini'] : initial vector for algorithm (must be positive)
+        param['K'] and param['q'] : step size mu_k  = 1/max(w) if k <= K and (k-K)^(-q)
+        param['stopCri'] : stopping criterion for algorithm
+        param['maxIter']: number of maximum iteration
+    
+    OUTPUT:
+        sinr_opt: optimized SINR of users
+        sprad: spectral radius of diag(sinr_opt) * M
+    """
+
+    r = param['r_ini']
+    gamma = 0
+    beta = max(w)   # Lipschitz constant of gradient
+    mu = 1/beta     # step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
+    K = param['K']
+    q = param['q']
+    stopCri = param['stopCri']
+    maxIter = param['maxIter']
+    L = M_block.shape[2]
+    rate_prog = [r]
+
+    for kk in range(maxIter+1):
+        r_prev = r.copy()
+        gamma_prev = gamma
+
+        gamma_max = 0
+        l_max = np.nan
+        for l in range(L):
+            gamma_l, _ = find_sprad(np.diag(np.exp(r) - 1) @ M_block[:,:,l])
+            
+            if gamma_l > gamma_max:
+                gamma_max = gamma_l
+                l_max = l
+        
+        gamma = gamma_max
+        M = M_block[:,:,l_max]
+
+        # radial projection
+        alpha = 1 / gamma
+        s_Pr = alpha*(np.exp(r) - 1)
+        r_Pr = np.log(1 + s_Pr)
+
+        _, xi = find_sprad(np.diag(np.exp(r_Pr) - 1) @ M)
+        _, eta = find_sprad(M.T @ np.diag(np.exp(r_Pr) - 1))
+
+        xi = xi / (xi @ eta)
+
+        if gamma > 1:
+            #TODO: should gamma=1 in calculation of g? -> gradient evaluated in radial projection r_Pr, should be gamma=1
+            g = xi * eta * np.exp(r_Pr)/ (np.exp(r_Pr) - 1)
+            r_hat = r - np.inner(r - r_Pr, g) / (g @ g) * g
+        else:
+            r_hat = r
+        
+        r_til = np.maximum(0, r_hat)    # disregards b in the simulations
+
+        if kk > K:
+            mu = 1 / beta * (kk - K)**(-q)
+        r = r_til + mu * w
+        rate_prog.append(r)
+            
+        if gamma < 1 + stopCri and np.abs(gamma - gamma_prev) < stopCri and np.abs(w @ np.log(1+r) - w @ np.log(1+r_prev)) < stopCri:
+            break
+    
+    # scale to get to feasible region (sprad=1)
+    alpha = 1/gamma
+    s_scaled = alpha*(np.exp(r) - 1)
+    r_scaled = np.log(1 + s_scaled)
+
+    gamma_max = 0
+    l_max = np.nan
+    for l in range(L):
+        gamma_l, _ = find_sprad(np.diag(np.exp(r_scaled) - 1) @ M_block[:,:,l])
+        
+        if gamma_l > gamma_max:
+            gamma_max = gamma_l
+            l_max = l
+    
+    rate_opt = r_scaled
+    sprad = gamma_max
+
+    return rate_opt, sprad, gamma
 
 
 def bcd(bk, ck, sigma2, K, pmax):

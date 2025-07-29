@@ -1,5 +1,5 @@
 import numpy as np
-import toolbox as funcs
+import RateRegions.toolbox as funcs
 
 def create_areas(params_dict, tests, start=0):
     L = params_dict["L"]
