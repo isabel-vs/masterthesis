@@ -1,7 +1,6 @@
 import numpy as np
-from SumRate.sumrate_max import *
-import RateRegions.toolbox as funcs
-import RateRegions.sim_funcs as sim
+from sumrate_max import *
+import toolbox as funcs
 import pickle
 import time
 
@@ -51,7 +50,7 @@ APpos = APpos_block[i,:,:]
 
 area_values = (R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos)
 
-M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = sim.run_sim(network_params, area_params, sim_params, area_values, i)
+M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = funcs.run_sim(network_params, area_params, sim_params, area_values, i)
 
 A = np.eye(K)
 M_k = np.zeros((K,K,K))

@@ -1,6 +1,5 @@
 import numpy as np
-import RateRegions.toolbox as funcs
-import RateRegions.sim_funcs as sim
+import toolbox as funcs
 from SumRate.sumrate_max import *
 import pickle
 
@@ -22,7 +21,7 @@ area_params = {"delta_h": 10 # height difference
                                      }
 
 sim_params = {"setups": 1,
-                     "batch":network_params["realizations"],
+                     "batch":1,
                      "v":-1,
                      "d": 0,   #rician factor (0: no LoS component)
                      "norm_type" : np.inf,
@@ -79,7 +78,7 @@ for i in range(tests):
     area_values = (R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos)
 
 
-    M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = sim.run_sim(network_params, area_params, sim_params, area_values, i)
+    M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = funcs.run_sim(network_params, area_params, sim_params, area_values, i)
 
     A = np.eye(K)
     M_k = np.zeros((K,K,K))
@@ -129,9 +128,12 @@ results = {
     'p_hsdmS': pow_hsdmS,
     'p_hsdmR': pow_hsdmR,
     'p_hsdmC': pow_hsdmC,
-    'p_bcd': pow_bcd
+    'p_bcd': pow_bcd,
+    'network_params': network_params,
+    'area_params': area_params,
+    'sim_params': sim_params
 }
 
-filename = f"cdf_results_L{L}N{N}K{K}_1000realizations.pkl"
+filename = f"cdf_results_L{L}N{N}K{K}.pkl"
 with open(filename, 'wb') as outfile:
     pickle.dump(results, outfile)

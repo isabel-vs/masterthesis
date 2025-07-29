@@ -1,6 +1,5 @@
 import numpy as np
 import toolbox as funcs
-import sim_funcs as sim
 import pickle
 
 network_params = {"realizations": 200  #(200 originally) small scale realizations  (Critical : should be a large value if large number APs and UEs are used)
@@ -12,9 +11,9 @@ network_params = {"realizations": 200  #(200 originally) small scale realization
 area_params = {"delta_h": 10 # height difference
                     , "area": 500  # lxl Service Area
                     , "bandwidth": 20e6
-                    , "L": 64  # APs
+                    , "L": 16  # APs
                     , "N": 4  # antennas per AP
-                    , "K": 6  # UEs
+                    , "K": 4  # UEs
                     , "carrier_frequency": 2000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
                     , "AP_pos_rand": False
@@ -34,7 +33,7 @@ K = area_params["K"]
 p_max = network_params["p_k"]
 tests = sim_params["tests"]
 
-filename = f"RateRegions/sim results/results_L{L}N{N}K{K}_0-49.pkl"
+filename = f"area_L{L}N{N}K{K}_0-49.pkl"
 area_block = pickle.load(open(filename, "rb"))
 
 (R_block, B_block, HMean_block, kappa_block, UEpos_block, APpos_block) = area_block
@@ -52,7 +51,7 @@ for i in range(tests):
     area_values = (R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos)
 
 
-    M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = sim.run_sim(network_params, area_params, sim_params, area_values, i)
+    M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = funcs.run_sim(network_params, area_params, sim_params, area_values, i)
 
     A = np.eye(K)
     M_k = np.zeros((K,K,K))

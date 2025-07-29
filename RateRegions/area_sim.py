@@ -1,6 +1,5 @@
 import numpy as np
 import toolbox as funcs
-import sim_funcs as sim
 import pickle
 
 area_params = {"delta_h": 10 # height difference
@@ -22,9 +21,9 @@ sim_params = {"setups": 1000,
                      "tests" :50
                     }
 
-L = [64]
-N = [4]
-K = [6]
+L = [16]
+N = [2]
+K = [16]
 
 start = 0
 tests = sim_params["tests"]
@@ -36,8 +35,8 @@ for l in L:
             area_params["N"] = n
             area_params["K"] = k
 
-            area_block = sim.create_areas(area_params, tests, start)
+            area_block = funcs.create_areas(area_params, tests, start)
 
             file = f"RateRegions/sim results/results_L{l}N{n}K{k}_{start}-{start+tests-1}.pkl"
             with open(file, 'wb') as outfile:
-                pickle.dump(area_block, outfile)
+                pickle.dump(area_block, outfile) 
