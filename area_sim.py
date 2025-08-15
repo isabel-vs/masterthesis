@@ -18,11 +18,11 @@ sim_params = {"setups": 1000,
                      "v":-1,
                      "d": 0,   #rician factor (0: no LoS component)
                      "norm_type" : np.inf,
-                     "tests" :50
+                     "tests" :1
                     }
 
-L = [16]
-N = [2]
+L = [4]
+N = [1]
 K = [16]
 
 start = 0
@@ -37,6 +37,6 @@ for l in L:
 
             area_block = funcs.create_areas(area_params, tests, start)
 
-            file = f"RateRegions/sim results/results_L{l}N{n}K{k}_{start}-{start+tests-1}.pkl"
+            file = f"area_L{l}N{n}K{k}_{start}-{start+tests-1}.pkl"
             with open(file, 'wb') as outfile:
                 pickle.dump(area_block, outfile) 

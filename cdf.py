@@ -12,9 +12,9 @@ network_params = {"realizations": 1000  #(200 originally) small scale realizatio
 area_params = {"delta_h": 10 # height difference
                     , "area": 500  # lxl Service Area
                     , "bandwidth": 20e6
-                    , "L": 64  # APs
-                    , "N": 4  # antennas per AP
-                    , "K": 6  # UEs
+                    , "L": 4  # APs
+                    , "N": 1  # antennas per AP
+                    , "K": 3  # UEs
                     , "carrier_frequency": 2000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
                     , "AP_pos_rand": False
@@ -25,7 +25,7 @@ sim_params = {"setups": 1,
                      "v":-1,
                      "d": 0,   #rician factor (0: no LoS component)
                      "norm_type" : np.inf,
-                     "tests" :50
+                     "tests" :1
                     }
 
 L = area_params["L"]
@@ -34,7 +34,7 @@ K = area_params["K"]
 p_max = network_params["p_k"]
 tests = sim_params["tests"]
 
-filename = f"RateRegions/sim results/results_L{L}N{N}K{K}_0-49.pkl"
+filename = f"RateRegions/Areas Sim/results_L{L}N{N}K{K}_rician0.pkl"
 area_block = pickle.load(open(filename, "rb"))
 
 (R_block, B_block, HMean_block, kappa_block, UEpos_block, APpos_block) = area_block
@@ -58,6 +58,11 @@ sumrate_hsdmR = []
 sumrate_hsdmC = []
 sumrate_bcd = []
 sumrate_maxPow = []
+rates_hsdmS = []
+rates_hsdmR = []
+rates_hsdmC = []
+rates_bcd = []
+rates_maxPow = []
 pow_hsdmS = np.zeros((K,tests))
 pow_hsdmR = np.zeros((K,tests))
 pow_hsdmC = np.zeros((K,tests))
@@ -66,7 +71,7 @@ pow_bcd = np.zeros((K,tests))
 p_maxPow = p_max * np.ones((K,1))
 
 
-for i in range(tests):
+for i in range(8,9):
     print(i)
     R_spatial_corr_norm = R_block[i,:,:,:,:]
     B_channel_gain =  B_block[i,:,:]
@@ -107,16 +112,26 @@ for i in range(tests):
     sinr_maxPow = funcs.sinr(M,u,p_maxPow)
     rate_maxPow = np.log(1 + sinr_maxPow)
 
+    rates_hsdmS.append(rate_hsdmS)
+    rates_hsdmR.append(rate_hsdmR)
+    rates_hsdmC.append(rate_hsdmC)
+    rates_bcd.append(rate_bcd)
+    rates_maxPow.append(rate_maxPow)
+
     sumrate_hsdmS.append(sum(rate_hsdmS))
     sumrate_hsdmR.append(sum(rate_hsdmR))
     sumrate_hsdmC.append(sum(rate_hsdmC))
     sumrate_bcd.append(sum(rate_bcd))
     sumrate_maxPow.append(sum(rate_maxPow))
 
-    pow_hsdmS[:,i] = p_hsdmS.flatten()
-    pow_hsdmR[:,i] = p_hsdmR.flatten()
-    pow_hsdmC[:,i] = p_hsdmC.flatten()
-    pow_bcd[:,i] = p_bcd
+    # pow_hsdmS[:,i] = p_hsdmS.flatten()
+    # pow_hsdmR[:,i] = p_hsdmR.flatten()
+    # pow_hsdmC[:,i] = p_hsdmC.flatten()
+    # pow_bcd[:,i] = p_bcd
+    pow_hsdmS[:,0] = p_hsdmS.flatten()
+    pow_hsdmR[:,0] = p_hsdmR.flatten()
+    pow_hsdmC[:,0] = p_hsdmC.flatten()
+    pow_bcd[:,0] = p_bcd
 
 results = {
     'invZ': invZ,
@@ -125,6 +140,11 @@ results = {
     'sumrate_hsdmC': sumrate_hsdmC,
     'sumrate_bcd': sumrate_bcd,
     'sumrate_maxPow': sumrate_maxPow,
+    'rates_hsdmS': rates_hsdmS,
+    'rates_hsdmR': rates_hsdmR,
+    'rates_hsdmC': rates_hsdmC,
+    'rates_bcd': rates_bcd,
+    'rates_maxPow': rates_maxPow,
     'p_hsdmS': pow_hsdmS,
     'p_hsdmR': pow_hsdmR,
     'p_hsdmC': pow_hsdmC,

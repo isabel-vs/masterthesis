@@ -125,7 +125,7 @@ def run_test(network_params, area_params, sim_params, area_block, tau_p):
     print("number of inv Z interf. matrixes:", num_inv)
     return num_inv
 
-
+#------------------
 
 def is_ZMatrix(matrix):
     off_diag_mask = ~np.eye(matrix.shape[0], dtype=bool)

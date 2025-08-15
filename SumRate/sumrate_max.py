@@ -224,6 +224,7 @@ def hsdm_cut(M_block, w, param):
             r_hat = r
         
         r_til = np.maximum(0, r_hat)    # disregards b in the simulations
+        r_til = np.minimum(r_til, 20)
 
         if kk > K:
             mu = 1 / beta * (kk - K)**(-q)
