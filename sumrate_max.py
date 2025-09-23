@@ -19,13 +19,17 @@ def hsdm_sinr(M_block, w, param):
 
     s = param['s_ini']
     gamma = 0
-    beta = max(w)   # Lipschitz constant of gradient
-    mu = 1/beta     # step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
+    # beta = max(w)   # Lipschitz constant of gradient
+    # mu = 1/beta     # step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
     K = param['K']
     q = param['q']
     stopCri = param['stopCri']
     maxIter = param['maxIter']
     L = M_block.shape[2]
+
+    beta = param['beta']
+    # beta = max(w)   # Lipschitz constant of gradient
+    mu = param['mu']
 
     for kk in range(maxIter+1):
         s_prev = s.copy()
@@ -99,15 +103,23 @@ def hsdm_rate(M_block, w, param):
 
     r = param['r_ini']
     gamma = 0
-    beta = max(w)   # Lipschitz constant of gradient
-    mu = 1/beta     # step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
+    # beta=10
+    beta = param['beta']
+    # beta = max(w)   # Lipschitz constant of gradient
+    mu = param['mu']
+    # mu = 1/beta     # step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
+    # mu = 0.001
     K = param['K']
     q = param['q']
     stopCri = param['stopCri']
     maxIter = param['maxIter']
     L = M_block.shape[2]
 
-    for kk in range(maxIter+1):
+    sol = param['solution']
+    conv_prog = [np.linalg.norm(r-sol)]
+    rate_prog = [r]
+
+    for kk in range(1,maxIter+1):
         r_prev = r.copy()
         gamma_prev = gamma
 
@@ -138,8 +150,11 @@ def hsdm_rate(M_block, w, param):
         r_til = np.minimum(r_til, 20)
 
         if kk > K:
-            mu = 1 / beta * (kk - K)**(-q)
+            # mu = 1 / beta * (kk - K)**(-q)
+            mu = 1 / beta * kk**(-q)
         r = r_til + mu * w
+        rate_prog.append(r)
+        conv_prog.append(np.linalg.norm(r-sol))
             
         if gamma < 1 + stopCri and np.abs(gamma - gamma_prev) < stopCri and np.abs(w @ np.log(1+r) - w @ np.log(1+r_prev)) < stopCri:
             break
@@ -161,7 +176,9 @@ def hsdm_rate(M_block, w, param):
     rate_opt = r_scaled
     sprad = gamma_max
 
-    return rate_opt, sprad, gamma
+    rate_opt = r
+
+    return rate_opt, sprad, conv_prog, rate_prog, gamma
 
 
 def hsdm_cut(M_block, w, param):
@@ -181,16 +198,23 @@ def hsdm_cut(M_block, w, param):
 
     r = param['r_ini']
     gamma = 0
-    beta = max(w)   # Lipschitz constant of gradient
-    mu = 1/beta     # step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
+    # beta = max(w)   # Lipschitz constant of gradient
+    # beta = 10
+    beta = param['beta']
+    mu = param['mu']
+    # mu = 1/beta     # step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
+    # mu = 0.001
     K = param['K']
     q = param['q']
     stopCri = param['stopCri']
     maxIter = param['maxIter']
     L = M_block.shape[2]
+
+    sol = param['solution']
+    conv_prog = [np.linalg.norm(r-sol)]
     rate_prog = [r]
 
-    for kk in range(maxIter+1):
+    for kk in range(1,maxIter+1):
         r_prev = r.copy()
         gamma_prev = gamma
 
@@ -211,25 +235,27 @@ def hsdm_cut(M_block, w, param):
         s_Pr = alpha*(np.exp(r) - 1)
         r_Pr = np.log(1 + s_Pr)
 
-        _, xi = find_sprad(np.diag(np.exp(r_Pr) - 1) @ M)
+        gamma_test, xi = find_sprad(np.diag(np.exp(r_Pr) - 1) @ M)
         _, eta = find_sprad(M.T @ np.diag(np.exp(r_Pr) - 1))
 
         xi = xi / (xi @ eta)
 
         if gamma > 1:
-            #TODO: should gamma=1 in calculation of g? -> gradient evaluated in radial projection r_Pr, should be gamma=1
             g = xi * eta * np.exp(r_Pr)/ (np.exp(r_Pr) - 1)
             r_hat = r - np.inner(r - r_Pr, g) / (g @ g) * g
         else:
             r_hat = r
         
-        r_til = np.maximum(0, r_hat)    # disregards b in the simulations
+        r_til = np.maximum(0, r_hat)
         r_til = np.minimum(r_til, 20)
+        # r_til = r_hat
 
         if kk > K:
-            mu = 1 / beta * (kk - K)**(-q)
+            # mu = 1 / beta * (kk - K)**(-q)
+            mu = 1 / beta * kk**(-q)
         r = r_til + mu * w
         rate_prog.append(r)
+        conv_prog.append(np.linalg.norm(r-sol))
             
         if gamma < 1 + stopCri and np.abs(gamma - gamma_prev) < stopCri and np.abs(w @ np.log(1+r) - w @ np.log(1+r_prev)) < stopCri:
             break
@@ -251,7 +277,9 @@ def hsdm_cut(M_block, w, param):
     rate_opt = r_scaled
     sprad = gamma_max
 
-    return rate_opt, sprad, gamma
+    rate_opt = r
+
+    return rate_opt, sprad, conv_prog, rate_prog
 
 
 def bcd(bk, ck, sigma2, K, pmax):

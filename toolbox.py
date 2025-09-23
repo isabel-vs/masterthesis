@@ -202,6 +202,9 @@ def simulation_area(params_dict):
     dist_UEs_to_APs = np.zeros((L, K))
 
     # Deploying APs and UEs randomly within the service area
+    # if K==2:
+    #     UEpositions = (np.array([[0.4], [1]]) + 1j*np.array([[0.4], [1]]))*area
+    # else:
     UEpositions = (np.random.rand(K, 1) + 1j * np.random.rand(K, 1)) * area
 
     if AP_pos_rand:
