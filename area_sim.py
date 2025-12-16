@@ -3,11 +3,11 @@ import toolbox as funcs
 import pickle
 
 area_params = {"delta_h": 10 # height difference
-                    , "area": 500  # lxl Service Area
+                    , "area": 10  # lxl Service Area
                     , "bandwidth": 20e6
-                    , "L": 2  # APs
-                    , "N": 2  # antennas per AP
-                    , "K": 3  # UEs
+                    , "L": 1  # APs
+                    , "N": 4  # antennas per AP
+                    , "K": 4  # UEs
                     , "carrier_frequency": 2000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
                     , "AP_pos_rand": False
@@ -22,8 +22,8 @@ sim_params = {"setups": 1000,
                     }
 
 L = [1]
-N = [1]
-K = [2]
+N = [4]
+K = [4]
 
 start = 0
 tests = sim_params["tests"]

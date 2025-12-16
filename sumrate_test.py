@@ -5,18 +5,18 @@ import pickle
 import time
 import matplotlib.pyplot as plt
 
-network_params = {"realizations": 200  #(200 originally) small scale realizations  (Critical : should be a large value if large number APs and UEs are used)
+network_params = {"realizations": 1000  #(200 originally) small scale realizations  (Critical : should be a large value if large number APs and UEs are used)
                     , "tau_c": 200 # total samples in coherence block
-                    , "tau_p": 2  # samples for pilots
+                    , "tau_p": 3  # samples for pilots
                     , "p_k": 200  # uplink max power (mW)
                                      }
 
 area_params = {"delta_h": 10 # height difference
-                    , "area": 500  # lxl Service Area
+                    , "area": 100  # lxl Service Area
                     , "bandwidth": 20e6
                     , "L": 1  # APs
                     , "N": 1  # antennas per AP
-                    , "K": 2  # UEs
+                    , "K": 2 # UEs
                     , "carrier_frequency": 2000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
                     , "AP_pos_rand": False
@@ -42,7 +42,7 @@ area_block = pickle.load(open(filename, "rb"))
 
 (R_block, B_block, HMean_block, kappa_block, UEpos_block, APpos_block) = area_block
 
-i = 31
+i = 34
 
 R_spatial_corr_norm = R_block[i,:,:,:,:]
 B_channel_gain =  B_block[i,:,:]
@@ -69,48 +69,64 @@ print(inv_interf)
 w = np.ones(K)
 s_ini = np.ones(K)
 # r_ini = np.log(1 + s_ini)
-r_ini = np.ones(K)
+r_ini = 2* np.ones(K)
 
 param_hsdm = {
     's_ini': s_ini,     # initial value for Alg 1 (over SINR region)
     'r_ini': r_ini,     # initial value for Alg 2 (over rate region)
 
-    'K': 0,          # K > 0 (use constant step-size for first K iterations)
+    'K': 0,         # K > 0 (use constant step-size for first K iterations)
     'q': 0.9,           # 0 < q <= 1 (decay factor of step-size)
     'mu': 0.1,
-    'beta': 2,
+    'beta': 1,
     'stopCri': 1e-8,    # stopping criterion (need to be sufficiently small)
     'maxIter': 10000,    # number of max iteration (need to be sufficiently large)
-    'solution': np.zeros((K, K))
+    # 'solution': np.zeros((K, K))
+    'solution' : [0.30092038,0.45111856]
 }
 
 sinr_hsdmS, sprad_hsdmS, gammaS = hsdm_sinr(M_k, w, param_hsdm)
 rate_hsdm, sprad_hsdm, conv_prog, rate_prog, gamma = hsdm_rate(M_k, w, param_hsdm)
-rate_hsdmC, sprad_hsdmC, conv_progC, rate_progC = hsdm_cut(M_k, w, param_hsdm)
+# rate_hsdmC, sprad_hsdmC, conv_progC, rate_progC = hsdm_cut(M_k, w, param_hsdm)
 rate_hsdmS = np.log(sinr_hsdmS + 1)
-# rate_hsdm /= np.log(2)
-
-print("hsdmS rate:", np.sum(rate_hsdmS), rate_hsdmS, gammaS)
-print("hsdmR rate:", np.sum(rate_hsdm), rate_hsdm, gamma)
-print("hsdm deepcut:", np.sum(rate_hsdmC), rate_hsdmC)
 
 
-ax2 = plt.figure().add_subplot()
-ax2.semilogy(conv_prog, label='base')
-ax2.semilogy(conv_progC, label='deepcut')
-ax2.legend()
-ax2.grid()
+# ax2 = plt.figure().add_subplot()
+# ax2.semilogy(conv_prog, label='base')
+# ax2.semilogy(conv_progC, label='deepcut')
+# ax2.legend()
+# ax2.grid()
 
 # ax2.add_subplot()
 # ax2.semilogy(conv_progC)
 
 plt.show()
 
+
+p_ini = [p_max, p_max]
 # start_bcd = time.time()
-rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max)
+rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max, p_ini)
+
+# print(b, C, sigma, K, p_max)
+
+p_hsdm = power_fixpoint(p_max, K, M, u, (np.exp(rate_hsdm) - 1))
+p_hsdmS = power_fixpoint(p_max, K, M, u, (np.exp(rate_hsdmS) - 1))
+
+# rate_hsdmS /= np.log(2)
+# rate_hsdm /= np.log(2)
+
+
+# print(b, C, sigma, K, p_max)
+print("hsdmR:", np.sum(rate_hsdm), rate_hsdm, p_hsdm)
+print("hsdmS:", np.sum(rate_hsdmS), rate_hsdmS, p_hsdmS)
+# print(np.sum(rate_hsdmC), rate_hsdmC)
+
 # end_bcd = time.time()
 # rate_bcd /= np.log(2)
-print("bcd:", np.sum(rate_bcd), rate_bcd)
+print("bcd:", np.sum(rate_bcd), rate_bcd, p_bcd)
+# print("hsdmS rate:", np.sum(rate_hsdmS), rate_hsdmS, gammaS)
+# print("hsdmR rate:", np.sum(rate_hsdm), rate_hsdm, p_hsdm)
+# print("hsdm deepcut:", np.sum(rate_hsdmC), rate_hsdmC)
 # print("time bcd", (end_bcd - start_bcd))
 # print("power bcd:", p_bcd)
 

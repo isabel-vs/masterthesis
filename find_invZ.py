@@ -11,9 +11,9 @@ network_params = {"realizations": 200  #(200 originally) small scale realization
 area_params = {"delta_h": 10 # height difference
                     , "area": 500  # lxl Service Area
                     , "bandwidth": 20e6
-                    , "L": 20  # APs
-                    , "N": 20  # antennas per AP
-                    , "K": 20  # UEs
+                    , "L": 1  # APs
+                    , "N": 64  # antennas per AP
+                    , "K": 16  # UEs
                     , "carrier_frequency": 2000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
                     , "AP_pos_rand": False
@@ -33,7 +33,7 @@ K = area_params["K"]
 p_max = network_params["p_k"]
 tests = sim_params["tests"]
 
-filename = f"RateRegions/Areas Sim/results_L{L}N{N}K{K}_rician0.pkl"
+filename = f"MIMO/area_L{L}N{N}K{K}_0-49.pkl"
 area_block = pickle.load(open(filename, "rb"))
 
 (R_block, B_block, HMean_block, kappa_block, UEpos_block, APpos_block) = area_block

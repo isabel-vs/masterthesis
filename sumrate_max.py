@@ -62,25 +62,26 @@ def hsdm_sinr(M_block, w, param):
         s_til = np.minimum(s_til, np.exp(20))
 
         if kk > K:
-            mu = 1 / beta * (kk - K)**(-q)
+            # mu = 1 / beta * (kk - K)**(-q)
+            mu = 1 / beta * (kk)**(-q)
         s = s_til + mu * w / (1+s_til)
         
         if gamma < 1 + stopCri and np.abs(gamma - gamma_prev) < stopCri and np.abs(w @ np.log(1+s) - w @ np.log(1+s_prev)) < stopCri:
             break
 
     # scale to get back to feasible region (sprad=1)
-    s_scaled = 1/gamma * s
-
+    s_scaled = 1 / gamma * s
     gamma_max = 0
-    l_max = np.nan
     for l in range(L):
         gamma_l, _ = find_sprad(np.diag(s_scaled) @ M_block[:,:,l])
         
         if gamma_l > gamma_max:
             gamma_max = gamma_l
             l_max = l
+    # s_scaled = 1/gamma_max * s
      
     sinr_opt = s_scaled
+    # sinr_opt = s
     sprad = gamma_max
 
     return sinr_opt, sprad, gamma
@@ -163,6 +164,7 @@ def hsdm_rate(M_block, w, param):
     alpha = 1/gamma
     s_scaled = alpha*(np.exp(r) - 1)
     r_scaled = np.log(1 + s_scaled)
+    # r_scaled = P_rad(r, M)
 
     gamma_max = 0
     l_max = np.nan
@@ -176,7 +178,7 @@ def hsdm_rate(M_block, w, param):
     rate_opt = r_scaled
     sprad = gamma_max
 
-    rate_opt = r
+    # rate_opt = r
 
     return rate_opt, sprad, conv_prog, rate_prog, gamma
 
@@ -230,10 +232,13 @@ def hsdm_cut(M_block, w, param):
         gamma = gamma_max
         M = M_block[:,:,l_max]
 
-        # radial projection
+        # radial projection (wrong?)
         alpha = 1 / gamma
         s_Pr = alpha*(np.exp(r) - 1)
         r_Pr = np.log(1 + s_Pr)
+
+        # radial projection
+        # r_Pr = P_rad(r, M)
 
         gamma_test, xi = find_sprad(np.diag(np.exp(r_Pr) - 1) @ M)
         _, eta = find_sprad(M.T @ np.diag(np.exp(r_Pr) - 1))
@@ -263,7 +268,9 @@ def hsdm_cut(M_block, w, param):
     # scale to get to feasible region (sprad=1)
     alpha = 1/gamma
     s_scaled = alpha*(np.exp(r) - 1)
-    r_scaled = np.log(1 + s_scaled)
+    # r_scaled = np.log(1 + s_scaled)
+
+    r_scaled = P_rad(r, M)
 
     gamma_max = 0
     l_max = np.nan
@@ -277,12 +284,12 @@ def hsdm_cut(M_block, w, param):
     rate_opt = r_scaled
     sprad = gamma_max
 
-    rate_opt = r
+    # rate_opt = r
 
-    return rate_opt, sprad, conv_prog, rate_prog
+    return rate_opt, sprad, conv_prog, rate_prog, gamma
 
 
-def bcd(bk, ck, sigma2, K, pmax):
+def bcd(bk, ck, sigma2, K, pmax, p_ini):
     '''
     bk (Kx1)
     ck (KxK)
@@ -290,7 +297,8 @@ def bcd(bk, ck, sigma2, K, pmax):
     '''
     
     objec_new = np.inf
-    eta = pmax * np.random.uniform(low=np.nextafter(0,1), high=np.nextafter(1,2), size=(K))
+    # eta = pmax * np.random.uniform(low=np.nextafter(0,1), high=np.nextafter(1,2), size=(K))
+    eta = p_ini
 
     eee = np.zeros((K))
     uuu = np.zeros((K))
@@ -299,7 +307,7 @@ def bcd(bk, ck, sigma2, K, pmax):
     diff = 100
 
     iterr = 0
-    while (diff>0.0001) or (diff<0):
+    while (diff>1e-8) or (diff<0):
         iterr +=1
         objec_old = objec_new
 
@@ -325,6 +333,23 @@ def bcd(bk, ck, sigma2, K, pmax):
     rates = np.log(ddd)
     return rates, eta
 
+def P_rad(r, M):
+    #range: [0,1]
+    a_new = 1/2
+    gamma, _ = find_sprad(np.diag(np.exp(a_new*r) - 1) @ M)
+    thresh = 1e-8
+    left, right = (0, 1)
+    while gamma < 1 - thresh or gamma > 1 + thresh:
+        a_old = a_new
+        if gamma > 1:
+            a_new = a_old - 1/2 * (a_old - left)
+            right = a_old
+        else:   #gamma < 1
+            a_new = a_old + 1/2 * (right - a_old)
+            left = a_old
+        gamma, _ = find_sprad(np.diag(np.exp(a_new*r) - 1) @ M)
+
+    return a_new * r
 
 def find_sprad(A):
     """
@@ -346,7 +371,7 @@ def find_sprad(A):
 def power_fixpoint(p_max, K, M, u, s):
     p_new = p_max * np.random.uniform(low=np.nextafter(0,1), high=np.nextafter(1,2), size=(K,1))  #initialize randomly
     thresh = 1e-8
-    max_iter = 1000000
+    max_iter = 100000
     for iter in range(max_iter):
         p_old = p_new
         T = M @ p_new + u

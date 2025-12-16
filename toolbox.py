@@ -32,7 +32,7 @@ def create_areas(params_dict, tests, start=0):
     APpos = np.zeros((tests, L, 1), dtype=complex)
 
     for i in range(tests):
-        print("test ", i+1, "/", tests)
+        # print("test ", i+1, "/", tests)
         np.random.seed(i+start)
         R_spatial_corr_norm[i,:,:,:,:], B_channel_gain[i,:,:], HMean_norm[i,:,:,:], k_rician_factor[i,:,:], UEpos[i,:,:], APpos[i,:,:] = simulation_area(params_dict)
 
@@ -203,7 +203,11 @@ def simulation_area(params_dict):
 
     # Deploying APs and UEs randomly within the service area
     # if K==2:
-    #     UEpositions = (np.array([[0.4], [1]]) + 1j*np.array([[0.4], [1]]))*area
+    #     UEpositions = (np.array([[0.55], [0.6]]) + 1j*np.array([[0.5], [0.5]]))*area
+    # elif K==3:
+    #     UEpositions = (np.array([[0.55], [0.6], [0.65]]) + 1j*np.array([[0.5], [0.5], [0.5]]))*area
+    # elif K == 6:
+    #     UEpositions = (np.array([[0.55], [0.6], [0.65], [0.7], [0.75], [0.8]]) + 1j*np.array([[0.5], [0.5], [0.5], [0.5], [0.5], [0.5]]))*area
     # else:
     UEpositions = (np.random.rand(K, 1) + 1j * np.random.rand(K, 1)) * area
 
