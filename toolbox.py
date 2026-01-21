@@ -53,6 +53,7 @@ def run_sim(network_params, area_params, simulation_params, area_values, seed):
 
     np.random.seed(seed)
     p_max=network_params["p_k"]
+    # sigma_phi = network_params["sigma_phi"]
 
     # # A network setup is generated, distances and spatial correlation matrices are calculated
     # R_spatial_corr_norm, B_channel_gain, HMean_norm, k_rician_factor, UEpos, APpos = simulation_area(network_params)
@@ -67,6 +68,7 @@ def run_sim(network_params, area_params, simulation_params, area_values, seed):
 
     # Generate random channels, channel mean(los component) and spatial correlation matrix
     H, HMean, R_spatial_corr = channel_generation(network_params, area_params, R_spatial_corr_norm,HMean_norm,k_rician_factor)
+    # H, HMean, R_spatial_corr = channel_generation_phasenoise(network_params, area_params, R_spatial_corr_norm,HMean_norm,k_rician_factor,sigma_phi)
 
     # Estimate channels using MMSE estimator  (CSI is obtained)
     H_hat = channel_estimation(network_params, area_params, R_spatial_corr, pilot_indicies, H,
@@ -191,7 +193,7 @@ def simulation_area(params_dict):
     antennaSpacing = 1 / 2  # half wavelength
     sigma_sf_los = params_dict["sigma_sf_los"]  # dB
     noiseVariancedB = -174 + pow2db(bandwidth) + 7  # Compute noise power (in dBm)
-    AP_pos_rand = params_dict["AP_pos_rand"]
+    AP_style = params_dict["AP_pos_rand"]
 
     # Initializations to store values
     Beta = np.zeros((L, K))
@@ -202,8 +204,9 @@ def simulation_area(params_dict):
     dist_UEs_to_APs = np.zeros((L, K))
 
     # Deploying APs and UEs randomly within the service area
-    # if K==2:
-    #     UEpositions = (np.array([[0.55], [0.6]]) + 1j*np.array([[0.5], [0.5]]))*area
+    # if K==4:
+        # UEpositions = (np.array([[0.25], [0.75], [0.25], [0.75]]) + 1j*np.array([[0.25], [0.25], [0.75], [0.75]]))*area
+        # UEpositions = (np.array([[0.49], [0.49], [0.51], [0.51]]) + 1j*np.array([[0.49], [0.51], [0.49], [0.51]]))*area
     # elif K==3:
     #     UEpositions = (np.array([[0.55], [0.6], [0.65]]) + 1j*np.array([[0.5], [0.5], [0.5]]))*area
     # elif K == 6:
@@ -211,8 +214,23 @@ def simulation_area(params_dict):
     # else:
     UEpositions = (np.random.rand(K, 1) + 1j * np.random.rand(K, 1)) * area
 
-    if AP_pos_rand:
+    if AP_style == "rand":
         APpositions = (np.random.rand(L, 1) + 1j * np.random.rand(L, 1)) * area     # rand positions AP
+    elif AP_style == "stadium":
+        stadium_setup = True  # Set to True to activate the stadium topology
+        ue_cluster_radius = 0.05 * area  # UEs clustered within 5% of the center
+        ap_ring_radius = 0.45 * area     # APs placed at 45% radius (near edge)
+        center_loc = (area/2) + 1j*(area/2)
+        # 1. UE Placement: Tightly clustered in the center
+        # We use polar coordinates to distribute them randomly within the small circle
+        theta_ue = np.random.rand(K, 1) * 2 * np.pi
+        r_ue = np.sqrt(np.random.rand(K, 1)) * ue_cluster_radius # sqrt ensures uniform distribution
+        UEpositions = center_loc + r_ue * (np.cos(theta_ue) + 1j * np.sin(theta_ue))
+
+        # 2. AP Placement: Uniformly distributed ring around the UEs
+        # Equispaced angles for APs
+        theta_ap = np.linspace(0, 2 * np.pi, L, endpoint=False).reshape(L, 1)
+        APpositions = center_loc + ap_ring_radius * (np.cos(theta_ap) + 1j * np.sin(theta_ap))
     else:
         grid_points = int(np.sqrt(L))
         block_size = area/grid_points
@@ -290,7 +308,8 @@ def initial_access(network_params, params_dict, Beta):
         D_cellular[main_AP_index, k] = 1  # In cellular, only one AP with max channel gain is serving UE k
         pilot_indicies_ = pilot_assignment(k, main_AP_index, tau_p, pilot_indicies_, Beta)
 
-    D_DCC = createDCC(D_cellular, L, tau_p, Beta, pilot_indicies_)
+    # D_DCC = createDCC(D_cellular, L, tau_p, Beta, pilot_indicies_)
+    D_DCC = createDCC_M_Strongest(L, K, Beta, 2)
     return D_cellular, D_DCC, pilot_indicies_
 
 def createDCC(D_MasterAps, L, tau_p, Beta, pilot_indicies_):  # Cooperation cluster formation using Algo 4.1 from [2]
@@ -301,6 +320,36 @@ def createDCC(D_MasterAps, L, tau_p, Beta, pilot_indicies_):  # Cooperation clus
             ue_mask[ue_mask == 0] = -1
             ue_index = (db2pow(Beta[l_, :]) * ue_mask).argmax()
             D_[l_, ue_index] = 1
+    return D_
+
+def createDCC_M_Strongest(L, K, Beta, M_aps):
+    """
+    Assigns the N strongest APs to each UE based on channel gain Beta.
+    
+    Input:
+        L: Number of APs
+        K: Number of UEs
+        Beta: LxK Channel gains
+        N_aps: Integer, number of APs to serve each UE
+    Output:
+        D_: LxK assignment matrix
+    """
+    D_ = np.zeros((L, K))
+    
+    # Ensure we don't try to assign more APs than exist
+    n_to_assign = min(M_aps, L)
+    
+    for k in range(K):
+        # 1. Get the column of gains for UE k
+        ue_gains = Beta[:, k]
+        
+        # 2. Find indices of the N largest values
+        # argsort sorts in ascending order, so we take the last n_to_assign elements
+        strongest_ap_indices = np.argsort(ue_gains)[-n_to_assign:]
+        
+        # 3. Set these APs to 1 in the matrix
+        D_[strongest_ap_indices, k] = 1
+        
     return D_
 
 def channel_generation(network_params, params_dict, R, H_Mean, kappa):
@@ -332,6 +381,62 @@ def channel_generation(network_params, params_dict, R, H_Mean, kappa):
                                                                          l, k, :, :]
             R[l, k, :, :] = (1 / (1 + kappa[l, k])) * R[l, k, :, :]
             H[l, k, :, :] = H_Mean[l, k, :, :] + linalg.sqrtm(R[l, k, :, :]) @ H[l, k, :, :]
+    return H, H_Mean, R
+
+def channel_generation_phasenoise(network_params, params_dict, R, H_Mean, kappa, sigma_phi=0.0):
+    """
+    Input:
+        ... (previous inputs) ...
+        sigma_phi: Standard deviation of phase noise in radians (float). 
+                   Set to 0.0 to disable.
+
+    Output:
+        H: LxKxNxrealizations, random channel realizations WITH phase noise
+        H_Mean: ... (Unchanged, represents the nominal LoS knowledge)
+        R: ... (Unchanged)
+    """
+    L = params_dict["L"]
+    N = params_dict["N"]
+    K = params_dict["K"]
+    realizations = network_params["realizations"]
+
+    # 1. Prepare H_Mean copies
+    H_Mean = np.tile(H_Mean[:, :, :, np.newaxis], (1, 1, 1, realizations))
+
+    # 2. Generate initial White Gaussian Noise
+    H = sqrt(0.5) * (np.random.randn(L, K, N, realizations) + 1j * np.random.randn(L, K, N, realizations))
+
+    # 3. Apply Rician Channel Statistics (LoS + Correlation)
+    for l in range(0, L):
+        for k in range(0, K):
+            # Scale Mean and Covariance based on Kappa
+            # Note: We update H_Mean/R in place as per your original logic
+            H_Mean[l, k, :, :] = sqrt(kappa[l, k] / (1 + kappa[l, k])) * H_Mean[l, k, :, :]
+            R[l, k, :, :] = (1 / (1 + kappa[l, k])) * R[l, k, :, :]
+            
+            # Color the noise and add the Mean
+            # H = H_los + R^(1/2) * H_white
+            H[l, k, :, :] = H_Mean[l, k, :, :] + linalg.sqrtm(R[l, k, :, :]) @ H[l, k, :, :]
+
+    # 4. Apply Phase Noise (The new step)
+    if sigma_phi > 0:
+        # A. UE Phase Noise: Shape (1, K, 1, Realizations)
+        # Unique per User, shared across APs and Antennas
+        phi_UE = np.random.normal(0, sigma_phi, size=(1, K, 1, realizations))
+        
+        # B. AP Phase Noise: Shape (L, 1, N, Realizations)
+        # Unique per AP Antenna (Assuming Independent Oscillators per Antenna)
+        phi_AP = np.random.normal(0, sigma_phi, size=(L, 1, N, realizations))
+        
+        # Note: If APs have ONE shared oscillator for all antennas, change shape to (L, 1, 1, realizations)
+
+        # C. Total Phase Error (Broadcasted sum)
+        total_phase_error = phi_UE + phi_AP
+        
+        # D. Apply Rotator
+        rotator = np.exp(1j * total_phase_error)
+        H = H * rotator
+
     return H, H_Mean, R
 
 
@@ -438,6 +543,11 @@ def calculate_interf_matrix(network_params, params_dict, D_DCC, H_hat, H):
         v_k = Hhat_k[:,:,k][:, :, np.newaxis]
 
         v_k_H = H_(v_k)  # Rx1x(la.N) # taking hermition and reshaping for multiplications
+
+        ### different normalization for beamformer! (as in massive MIMO book), for testing purposes
+        # v_k_H = v_k_H / np.linalg.norm(v_k_H)
+        # v_k_H = v_k_H / np.linalg.norm(v_k_H)**2
+
         b[k] = abs(np.mean(v_k_H @ H_k[:, :, k, np.newaxis], axis=0) ** 2)
         sigma[k] = np.mean(np.sum(abs(v_k[:, :, 0] ** 2), axis=1))
         C[:,k][:,np.newaxis] = np.mean(abs((v_k_H @ H_k) ** 2), axis=0).T
