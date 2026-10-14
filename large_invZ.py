@@ -37,27 +37,27 @@ file = f"rate.pkl"
 K = matrix_size
 w = np.ones(K)
 s_ini = np.ones(K)
-# r_ini = np.log(1 + s_ini)
-r_ini = 2*np.ones(K)
+r_ini = np.log(1 + s_ini)
+# r_ini = 1*np.ones(K)
 param_hsdm = {
     's_ini': s_ini,     # initial value for Alg 1 (over SINR region)
     'r_ini': r_ini,     # initial value for Alg 2 (over rate region)
 
     # 'K': 2000,          # K > 0 (use constant step-size for first K iterations)
     'K': 0,
-    'q': 1,           # 0 < q <= 1 (decay factor of step-size)
-    'mu': 0.1,
+    'q': 0.9,           # 0 < q <= 1 (decay factor of step-size)
+    'mu': 1,
     'beta': 1,
     'stopCri': 1e-6,    # stopping criterion (need to be sufficiently small)
-    'maxIter': 1000,    # number of max iteration (need to be sufficiently large)
-    'solution': np.zeros((matrix_size, matrix_size))
-    # 'solution': sol_b
+    'maxIter': 5000,    # number of max iteration (need to be sufficiently large)
+    # 'solution': np.zeros((matrix_size, matrix_size))
+    'solution': sol_b
 }
 
-rate_hsdm, sprad_hsdm, conv_prog, rate_prog = hsdm_rate(M, w, param_hsdm)
+rate_hsdm, sprad_hsdm, conv_prog, rate_prog, _ = hsdm_rate(M, w, param_hsdm)
 rate_hsdmC, sprad_hsdmC, conv_progC, rate_progC = hsdm_cut(M, w, param_hsdm)
 
-rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max)
+# rate_bcd, p_bcd = bcd(b, C, sigma, K, p_max)
 
 
 ax2 = plt.figure().add_subplot()

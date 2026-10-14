@@ -1,22 +1,23 @@
 import numpy as np
 import toolbox as funcs
 import pickle
+import matplotlib.pyplot as plt
 
 network_params = {"realizations": 200  #(200 originally) small scale realizations  (Critical : should be a large value if large number APs and UEs are used)
                     , "tau_c": 200 # total samples in coherence block
-                    , "tau_p": 100  # samples for pilots
-                    , "p_k": 200  # uplink max power (mW)
+                    , "tau_p": 10  # samples for pilots
+                    , "p_k": 100   # uplink max power (mW)
                                      }
 
 area_params = {"delta_h": 10 # height difference
-                    , "area": 500  # lxl Service Area
+                    , "area": 100  # lxl Service Area
                     , "bandwidth": 20e6
-                    , "L": 20  # APs
-                    , "N": 20  # antennas per AP
-                    , "K": 20  # UEs
-                    , "carrier_frequency": 2000  # carrier frequency (MHz)
+                    , "L": 4 # APs
+                    , "N": 2 # antennas per AP
+                    , "K": 2  # UEs
+                    , "carrier_frequency": 20000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
-                    , "AP_pos_rand": False
+                    , "AP_pos_rand": "rand"
                                      }
 
 sim_params = {"setups": 1,
@@ -24,7 +25,7 @@ sim_params = {"setups": 1,
                      "v":-1,
                      "d": 0,   #rician factor (0: no LoS component)
                      "norm_type" : np.inf,
-                     "tests" :50
+                     "tests" :100
                     }
 
 L = area_params["L"]
@@ -33,7 +34,9 @@ K = area_params["K"]
 p_max = network_params["p_k"]
 tests = sim_params["tests"]
 
-filename = f"RateRegions/Areas Sim/results_L{L}N{N}K{K}_rician0.pkl"
+# filename = f"MIMO/area_L{L}N{N}K{K}_0-49.pkl"
+# filename = f"RateRegions/Areas Sim/results_L{L}N{N}K{K}_rician0.pkl"
+filename = f"2026_01_14/area_grid_L{L}N{N}K{K}.pkl"
 area_block = pickle.load(open(filename, "rb"))
 
 (R_block, B_block, HMean_block, kappa_block, UEpos_block, APpos_block) = area_block
@@ -52,7 +55,6 @@ for i in range(tests):
 
 
     M, u, b, C, sigma, SINR, UEpos, APpos, D_DCC = funcs.run_sim(network_params, area_params, sim_params, area_values, i)
-
     A = np.eye(K)
     M_k = np.zeros((K,K,K))
     inv_interf = True
