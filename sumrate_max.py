@@ -283,7 +283,7 @@ def hsdm_cut(M_block, w, param):
         if gamma_l > gamma_max:
             gamma_max = gamma_l
             l_max = l
-    
+
     rate_opt = r_scaled
     sprad = gamma_max
 

@@ -17,7 +17,7 @@ OUTPUT_FILE = "2026_01_21/invZ/invZ_summary_noisyMMSE.csv"
 L_values = [i**2 for i in range(2, 11)] 
 # L_fixed = 4
 # K from 2 to 10
-K_values = list(range(2, 8))
+K_values = list(range(2, 5))
 N_fixed = 2
 # N_values = [2, 4, 8, 12, 18, 24, 32, 40, 50]
 
@@ -25,8 +25,9 @@ N_fixed = 2
 network_params = {
     "realizations": 200, 
     "tau_c": 200, 
-    "tau_p": 10, 
-    "p_k": 100 
+    "tau_p": 1, 
+    "p_k": 100,
+    "csi_rho": 0.8
 }
 
 # Note: L, N, K in area_params will be updated in the loop

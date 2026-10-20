@@ -71,7 +71,9 @@ def run_sim(network_params, area_params, simulation_params, area_values, seed):
     # H, HMean, R_spatial_corr = channel_generation_phasenoise(network_params, area_params, R_spatial_corr_norm,HMean_norm,k_rician_factor,sigma_phi)
 
     # Estimate channels using MMSE estimator  (CSI is obtained)
-    H_hat = channel_estimation(network_params, area_params, R_spatial_corr, pilot_indicies, H,
+    # H_hat = channel_estimation(network_params, area_params, R_spatial_corr, pilot_indicies, H,
+                                                        # HMean, p_max)
+    H_hat = channel_estimation_noisyMMSE(network_params, area_params, R_spatial_corr, pilot_indicies, H,
                                                         HMean, p_max)
     
     #reshaping
@@ -309,7 +311,7 @@ def initial_access(network_params, params_dict, Beta):
         pilot_indicies_ = pilot_assignment(k, main_AP_index, tau_p, pilot_indicies_, Beta)
 
     # D_DCC = createDCC(D_cellular, L, tau_p, Beta, pilot_indicies_)
-    D_DCC = createDCC_M_Strongest(L, K, Beta, 2)
+    D_DCC = createDCC_M_Strongest(L, K, Beta, L)
     return D_cellular, D_DCC, pilot_indicies_
 
 def createDCC(D_MasterAps, L, tau_p, Beta, pilot_indicies_):  # Cooperation cluster formation using Algo 4.1 from [2]
@@ -489,6 +491,84 @@ def channel_estimation(network_params, params_dict, R, pilot_indicies_, H, H_Mea
 
     return H_hat
 
+
+def channel_estimation_noisyMMSE(network_params, params_dict, R, pilot_indicies_, H, H_Mean, p_k):
+    """
+    Hybrid Channel Estimation:
+    1. Performs physical MMSE estimation based on pilots (captures pilot contamination).
+    2. Adds extra stochastic error based on 'csi_rho' (captures aging/impairments).
+    
+    Model: H_final = sqrt(rho) * H_MMSE + sqrt(1 - rho) * Error_Colored
+    """
+
+    L = params_dict["L"]
+    N = params_dict["N"]
+    K = params_dict["K"]
+    tau_p = network_params["tau_p"]
+    realizations = network_params["realizations"]
+    p_k = np.full(K, p_k)
+    H_hat = np.zeros((L, K, N, realizations), dtype=complex)
+    N_tk = sqrt(0.5) * (np.random.randn(N, realizations, L, tau_p) + 1j * np.random.randn(N, realizations, L, tau_p))
+
+    for l in range(0, L):
+        for t in range(0, tau_p):
+            dim_array = np.ones((1, H[l, (t == pilot_indicies_).flatten(), :, :].ndim), int).ravel()
+            dim_array[0] = -1
+            p_k_reshaped = p_k.reshape(dim_array)
+            # received pilot signal at each AP from all UEs receiving on that pilot
+            y_pilot = np.sum(
+                np.sqrt(p_k_reshaped[(t == pilot_indicies_).flatten()]) * tau_p * H[l, (t == pilot_indicies_).flatten(),
+                                                                                  :, :], axis=0) + sqrt(tau_p) * N_tk[:,
+                                                                                                                 :, l,
+                                                                                                                 t]
+            y_mean = np.sum(np.sqrt(p_k_reshaped[(t == pilot_indicies_).flatten()]) * tau_p * H_Mean[l, (
+                                                                                                                t == pilot_indicies_).flatten(),
+                                                                                              :, :], axis=0)
+            Psi = np.sum(
+                p_k_reshaped[(t == pilot_indicies_).flatten()] * tau_p * R[l, (t == pilot_indicies_).flatten(), :, :],
+                axis=0) + np.eye(N)
+
+            # Go through all UEs that use pilot t
+            for k in np.where(np.any(pilot_indicies_ == t, axis=1))[0]:
+                # Compute the MMSE estimate
+                RPsi = R[l, k, :, :] @ np.linalg.inv(Psi)
+                H_hat[l, k, :, :] = H_Mean[l, k, :, :] + np.sqrt(p_k[k]) * RPsi @ (y_pilot - y_mean)
+
+    # --- STAGE 2: Add Stochastic Error (Gauss-Markov) ---
+    
+    rho = float(network_params.get("csi_rho", 1.0)) # Default to 1.0 (no extra error)
+    
+    # If rho is 1.0, we just return the MMSE estimate (pure Stage 1)
+    if rho >= 1.0:
+        return H_hat
+
+    scale_true = np.sqrt(rho)
+    scale_err = np.sqrt(1.0 - rho)
+    
+    # Pre-generate white noise for the error term
+    noise_white = np.sqrt(0.5) * (np.random.randn(L, K, N, realizations) + 
+                                  1j * np.random.randn(L, K, N, realizations))
+
+    # Apply the error model to the MMSE estimate
+    for l in range(L):
+        for k in range(K):
+            # We color the noise using the spatial correlation matrix R.
+            # This ensures the "extra error" follows the spatial direction of the channel.
+            R_lk = R[l, k, :, :]
+            
+            # Calculate R^1/2 using eigendecomposition
+            eigvals, eigvecs = np.linalg.eigh(R_lk)
+            eigvals = np.maximum(eigvals, 0) # Clip negatives for stability
+            R_sqrt = eigvecs @ np.diag(np.sqrt(eigvals)) @ eigvecs.conj().T
+            
+            # Generate colored error: R^1/2 * WhiteNoise
+            error_colored = R_sqrt @ noise_white[l, k, :, :]
+            
+            # Update H_hat with the aging/error model
+            # New_Estimate = sqrt(rho) * MMSE_Estimate + sqrt(1-rho) * Error
+            H_hat[l, k, :, :] = scale_true * H_hat[l, k, :, :] + scale_err * error_colored
+
+    return H_hat
 
 def compute_SINR_MRC(network_params,params_dict, p_k, D_DCC, H_hat, H):
     N = params_dict["N"]

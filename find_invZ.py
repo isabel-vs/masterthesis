@@ -2,6 +2,7 @@ import numpy as np
 import toolbox as funcs
 import pickle
 import matplotlib.pyplot as plt
+import scipy.io
 
 network_params = {"realizations": 200  #(200 originally) small scale realizations  (Critical : should be a large value if large number APs and UEs are used)
                     , "tau_c": 200 # total samples in coherence block
@@ -14,7 +15,7 @@ area_params = {"delta_h": 10 # height difference
                     , "bandwidth": 20e6
                     , "L": 4 # APs
                     , "N": 2 # antennas per AP
-                    , "K": 2  # UEs
+                    , "K": 10  # UEs
                     , "carrier_frequency": 20000  # carrier frequency (MHz)
                     , "sigma_sf_los": 8  # Shadow fading LoS (dB)
                     , "AP_pos_rand": "rand"
@@ -36,14 +37,14 @@ tests = sim_params["tests"]
 
 # filename = f"MIMO/area_L{L}N{N}K{K}_0-49.pkl"
 # filename = f"RateRegions/Areas Sim/results_L{L}N{N}K{K}_rician0.pkl"
-filename = f"2026_01_14/area_grid_L{L}N{N}K{K}.pkl"
+filename = f"2026_01_15/areas/area_grid_L{L}N{N}K{K}.pkl"
 area_block = pickle.load(open(filename, "rb"))
 
 (R_block, B_block, HMean_block, kappa_block, UEpos_block, APpos_block) = area_block
 
 idx_invZ = []
 
-for i in range(tests):
+for i in range(3,4):
     R_spatial_corr_norm = R_block[i,:,:,:,:]
     B_channel_gain =  B_block[i,:,:]
     HMean_norm = HMean_block[i,:,:,:]
@@ -65,6 +66,14 @@ for i in range(tests):
             break
     if inv_interf:
         idx_invZ.append(i)
+
+data_to_save = {
+    'b': b,
+    'C': C,
+    'sig': sigma
+}
+
+scipy.io.savemat('my_data.mat', data_to_save)
 
 print(idx_invZ)
 print(len(idx_invZ))

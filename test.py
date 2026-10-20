@@ -15,10 +15,10 @@ sumrate_hsdmC = []
 sumrate_bcd = []
 
 
-C = np.array([[3.804458469753567e+03, 5.307975530089727e+03, 5.688236608721927e+03, 1.621823081932428e+03],
-              [5.678216407252211e+03, 7.791672301020111e+03, 4.693906410582058e+03, 7.942845406839069e+03],
-              [7.585428956306362e+02, 9.340106842291830e+03, 1.190206950124140e+02, 3.112150420448049e+03],
-              [5.395011866660715e+02, 1.299062084737301e+03, 3.371226443988815e+03, 5.285331355062127e+03]])
+# C = np.array([[3.804458469753567e+03, 5.307975530089727e+03, 5.688236608721927e+03, 1.621823081932428e+03],
+#               [5.678216407252211e+03, 7.791672301020111e+03, 4.693906410582058e+03, 7.942845406839069e+03],
+#               [7.585428956306362e+02, 9.340106842291830e+03, 1.190206950124140e+02, 3.112150420448049e+03],
+#               [5.395011866660715e+02, 1.299062084737301e+03, 3.371226443988815e+03, 5.285331355062127e+03]])
 C = np.array([[3.804458469753567e+03, 5.307975530089727e+03, 5.688236608721927e+03, 1.621823081932428e+03],
               [5.307975530089727e+03, 7.791672301020111e+03, 4.693906410582058e+03, 7.942845406839069e+03],
               [5.688236608721927e+03, 4.693906410582058e+03, 1.190206950124140e+02, 3.112150420448049e+03],
@@ -78,7 +78,7 @@ for i in range(a,a+1):
     p_ini = 0.1 + 0.9 * np.random.rand(K,1)
     p_ini = (p_max / np.max(p_ini)) * p_ini
     # p_ini = np.array([[1], [0.01], [1]])
-    s_ini = p_ini / F(p_ini, M, u)
+    s_ini = p_ini.flatten() / F(p_ini.flatten(), M, u.flatten())
     r_ini = np.log(1 + s_ini)
 
 
@@ -93,16 +93,16 @@ for i in range(a,a+1):
     }
 
 
-    # sinr_hsdmS, sprad_hsdmS, gammaS = hsdm_sinr(M_k, w, param_hsdm)
-    # rate_hsdmS = np.log(sinr_hsdmS + 1)
-    # rate_hsdmR, sprad_hsdm, rate_prog, gammaR = hsdm_rate(M_k, w, param_hsdm)
-    # rate_hsdmC, sprad_hsdmC, _, gammaC = hsdm_cut(M_k, w, param_hsdm)
+    sinr_hsdmS, sprad_hsdmS, gammaS = hsdm_sinr(M_k, w, param_hsdm)
+    rate_hsdmS = np.log(sinr_hsdmS + 1)
+    rate_hsdmR, sprad_hsdm, rate_prog, gammaR = hsdm_rate(M_k, w, param_hsdm)
+    rate_hsdmC, sprad_hsdmC, _, gammaC = hsdm_cut(M_k, w, param_hsdm)
    
     rate_bcd, rate_ddd, sumrate, p_bcd = bcd(b, C, sig, K, p_max, p_ini)
 
-    # sumrate_hsdmS.append(np.sum(rate_hsdmS))
-    # sumrate_hsdmR.append(np.sum(rate_hsdmR))
-    # sumrate_hsdmC.append(np.sum(rate_hsdmC))
+    sumrate_hsdmS.append(np.sum(rate_hsdmS))
+    sumrate_hsdmR.append(np.sum(rate_hsdmR))
+    sumrate_hsdmC.append(np.sum(rate_hsdmC))
     sumrate_bcd.append(np.sum(rate_bcd))
 
     # p_hsdmS = power_fixpoint(p_max, K, M, u, sinr_hsdmS)
@@ -130,10 +130,10 @@ for i in range(a,a+1):
     # rate_hsdmC /= np.log(2)
     # rate_bcd /= np.log(2)
 
-    # print("rate S:", np.sum(rate_hsdmS))
-    # print("rate R:", np.sum(rate_hsdmR))
-    # print("rate C:", np.sum(rate_hsdmC))
-    # print("rate bcd:", np.sum(rate_bcd))
+    print("rate S:", np.sum(rate_hsdmS))
+    print("rate R:", np.sum(rate_hsdmR))
+    print("rate C:", np.sum(rate_hsdmC))
+    print("rate bcd:", np.sum(rate_bcd))
 
 # print("rate S:", sumrate_hsdmS, sprad_hsdmS, gammaS)
 # print("rate R:", sumrate_hsdmR, sprad_hsdm, gammaR)

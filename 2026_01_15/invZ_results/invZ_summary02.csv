@@ -62,33 +62,3 @@ L,N,K,invZ_count,total_tests,percentage
 100,2,6,17,100,17.0
 100,2,7,4,100,4.0
 100,2,8,0,100,0.0
-
-# Base Parameters (static parts)
-network_params = {
-    "realizations": 200, 
-    "tau_c": 200, 
-    "tau_p": 1, 
-    "p_k": 100 
-}
-
-# Note: L, N, K in area_params will be updated in the loop
-area_params = {
-    "delta_h": 10, 
-    "area": 100, 
-    "bandwidth": 20e6, 
-    "L": 4,  # Placeholder
-    "N": 2,  # Placeholder
-    "K": 2,  # Placeholder
-    "carrier_frequency": 20000, 
-    "sigma_sf_los": 8, 
-    "AP_pos_rand": "grid"
-}
-
-sim_params = {
-    "setups": 1,
-    "batch": network_params["realizations"],
-    "v": -1,
-    "d": 0, 
-    "norm_type": np.inf,
-    "tests": 100 # Placeholder, will be detected from data
-}

@@ -15,7 +15,7 @@ function [outarg] = hsdm_rate_mod(param)
     r = param.init;
     w = param.w;
     gamma = 0;
-    beta = max(w); % Lipschitz constant of gradient (can be any positive number)
+    beta = param.beta; % Lipschitz constant of gradient (can be any positive number)
     mu = 1 / beta; % step-size for first K iterations (nonexpansive if 0 < mu < 2/beta)
     K = param.K;
     q = param.q;
@@ -26,6 +26,7 @@ function [outarg] = hsdm_rate_mod(param)
     
     sprad_prog = zeros(maxIter,1);
     sumrate_prog = zeros(maxIter,1);
+    rate_prog = zeros(maxIter,L);
     
 %     rate_track = [];
 
@@ -52,7 +53,8 @@ function [outarg] = hsdm_rate_mod(param)
         eta = abs(eta);
         xi = xi / (xi' * eta);
         if gamma > 1
-            g = gamma * xi .* eta .* exp(r) ./ (exp(r) - 1);
+%             g = gamma * xi .* eta .* exp(r) ./ (exp(r) - 1);
+            g = (diag(exp(r))*diag(eta)*M* xi)/(eta' * xi);
             r_hat = r - (gamma - 1) * g / (g' * g);
         else
             r_hat = r;
@@ -68,6 +70,7 @@ function [outarg] = hsdm_rate_mod(param)
         
         sprad_prog(kk) = gamma;
         sumrate_prog(kk) = sum(r);
+        rate_prog(kk,:) = r;
 
         if gamma < 1 + stopCri ...
                 && abs(gamma - gamma_prev) < stopCri ...
@@ -75,6 +78,19 @@ function [outarg] = hsdm_rate_mod(param)
              break
         end
     end
+%     radial projection to feasible region
+    r = P_rad(r,M);
+
+    gamma_max = 0;
+%     l_max = NaN;
+    for l = 1:L
+        [~, gamma_l] = eigs(diag(exp(r) - 1) * M, 1, 'largestreal');
+        if gamma_l > gamma_max
+            gamma_max = gamma_l;
+%             l_max = l;
+        end
+    end
+    gamma = gamma_max;
     
 %     rate_opt = r;
 %     sprad = gamma;
@@ -82,5 +98,8 @@ function [outarg] = hsdm_rate_mod(param)
     outarg.sumrate_opt = sum(r);
     outarg.sumrate = sumrate_prog;
     outarg.sprad = sprad_prog;
+    outarg.gamma = gamma;
+    outarg.rate_opt = r;
+    outarg.rate = rate_prog;
 
 end
