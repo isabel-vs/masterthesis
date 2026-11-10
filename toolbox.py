@@ -161,7 +161,18 @@ def is_invZ(M):
     if is_ZMatrix(M_inv):
         return True
     return False
-    
+
+def is_Prop(M):
+    K = M.shape[0]
+
+    if M.ndim != 2 or M.shape[0] != M.shape[1]:
+        raise ValueError("Input must be a square matrix")
+
+    I = np.eye(K)
+    A = M @ np.linalg.inv(M + I)
+
+    return np.all(A >= 0)
+
 
 def sinr(M, u, p):
     K = M.shape[0]
